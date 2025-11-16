@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ready Set Sell - Companion App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body { font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', cursive; }
+        input[type="time"]::-webkit-datetime-edit-ampm-field { display: none; }
+        .strategy-used { opacity: 0.5; pointer-events: none; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-yellow-50 to-pink-50 min-h-screen">
+    
+    <!-- Login/Register Modal -->
+    <div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full mx-4 border-4 border-yellow-300">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">🎮 Ready, Set, Sell!</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-lg font-bold text-gray-700 mb-2">Username</label>
+                    <input type="text" id="authUsername" class="w-full p-4 border-4 border-blue-300 rounded-2xl bg-blue-50 font-semibold" placeholder="Masukkan username">
+                </div>
+                
+                <div id="registerFields">
+                    <div>
+                        <label class="block text-lg font-bold text-gray-700 mb-2">Level Permainan</label>
+                        <select id="authLevel" class="w-full p-4 border-4 border-purple-300 rounded-2xl bg-purple-50 font-semibold">
+                            <option value="">Pilih Level</option>
+                            <option value="easy">🟢 Easy</option>
+                            <option value="medium">🟡 Medium</option>
+                            <option value="hard">🔴 Hard</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <label class="block text-lg font-bold text-gray-700 mb-2">Kelompok</label>
+                        <select id="authKelompok" class="w-full p-4 border-4 border-green-300 rounded-2xl bg-green-50 font-semibold">
+                            <option value="">Pilih Kelompok</option>
+                            <option value="A">Kelompok A</option>
+                            <option value="B">Kelompok B</option>
+                            <option value="C">Kelompok C</option>
+                            <option value="D">Kelompok D</option>
+                            <option value="E">Kelompok E</option>
+                            <option value="F">Kelompok F</option>
+                            <option value="G">Kelompok G</option>
+                            <option value="H">Kelompok H</option>
+                        </select>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-2">Tanggal</label>
+                            <input type="date" id="authTanggal" class="w-full p-4 border-4 border-pink-300 rounded-2xl bg-gray-100 font-semibold" readonly style="background-color: #f3f4f6;">
+                        </div>
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-2">Waktu</label>
+                            <input type="time" id="authWaktu" step="60" class="w-full p-4 border-4 border-pink-300 rounded-2xl bg-pink-50 font-semibold" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex gap-4 mt-6">
+                    <button onclick="handleLogin()" class="flex-1 bg-gradient-to-r from-blue-400 to-blue-500 text-white px-6 py-4 rounded-2xl font-bold hover:from-blue-500 hover:to-blue-600 transition-all shadow-lg border-4 border-blue-600">
+                        Login
+                    </button>
+                    <button onclick="handleRegister()" class="flex-1 bg-gradient-to-r from-yellow-300 to-orange-400 text-gray-800 px-6 py-4 rounded-2xl font-bold hover:from-yellow-400 hover:to-orange-500 transition-all shadow-lg border-4 border-yellow-500">
+                        Register
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-yellow-200 via-yellow-300 to-orange-300 text-gray-800 p-8 shadow-lg relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-40 h-40 bg-white opacity-20 rounded-full -mr-20 -mt-20"></div>
+            <div class="absolute bottom-0 left-0 w-32 h-32 bg-white opacity-20 rounded-full -ml-16 -mb-16"></div>
+            <div class="relative z-10 flex justify-between items-center">
+                <div>
+                    <h1 class="text-4xl font-bold mb-2">Ready, Set, Sell! 🎮</h1>
+                    <p class="text-yellow-800 text-lg">
+                        <span id="userInfo"></span> - Kuartil <span id="currentQuarter">1</span>
+                    </p>
+                    <p class="text-yellow-700 text-sm mt-1">Lawan: Kelompok <span id="opponentInfo"></span></p>
+                </div>
+                <button onclick="handleLogout()" class="bg-white bg-opacity-50 px-6 py-3 rounded-2xl font-bold hover:bg-opacity-70 transition-all">
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="bg-white shadow-md">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex space-x-4">
+                    <button onclick="showTab('input')" id="tabInput" class="py-4 px-8 font-bold rounded-t-2xl transition-all bg-gradient-to-b from-blue-200 to-blue-100 text-blue-800 shadow-inner">
+                        📝 Input Keputusan
+                    </button>
+                    <button onclick="showTab('summary')" id="tabSummary" class="py-4 px-8 font-bold rounded-t-2xl transition-all bg-gray-50 text-gray-500 hover:bg-gray-100">
+                        📊 Ringkasan
+                    </button>
+                    <button onclick="showTab('report')" id="tabReport" class="py-4 px-8 font-bold rounded-t-2xl transition-all bg-gray-50 text-gray-500 hover:bg-gray-100">
+                        📄 Laporan
+                    </button>
+                    <button onclick="showTab('leaderboard')" id="tabLeaderboard" class="py-4 px-8 font-bold rounded-t-2xl transition-all bg-gray-50 text-gray-500 hover:bg-gray-100">
+                        🏆 Leaderboard
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="max-w-7xl mx-auto p-6">
+            <!-- Input Tab -->
+            <div id="inputTab" class="space-y-6">
+                <!-- Strategy Usage Counter -->
+                <div class="bg-gradient-to-r from-orange-100 to-yellow-100 rounded-3xl shadow-lg p-6 border-4 border-orange-300">
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">📋 Penggunaan Strategi Marketing</h3>
+                    <p class="text-gray-700 mb-3">Setiap strategi hanya dapat dipilih maksimal 3 kali selama 8 kuartil</p>
+                    <div id="strategyCounter" class="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm"></div>
+                </div>
+
+                <!-- Strategi Pemasaran -->
+                <div class="bg-white rounded-3xl shadow-lg p-8 border-4 border-blue-200">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">📈 Strategi Pemasaran</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-3">Strategi 1</label>
+                            <select id="marketing1" onchange="updateStrategyCounter()" class="w-full p-4 border-4 border-blue-300 rounded-2xl bg-blue-50 font-semibold">
+                                <option value="">Pilih Strategi</option>
+                                <option value="Iklan Radio">Iklan Radio</option>
+                                <option value="Iklan Televisi">Iklan Televisi</option>
+                                <option value="Brosur, Billboard & OOH">Brosur, Billboard & OOH</option>
+                                <option value="Upgrade Fasilitas Toko">Upgrade Fasilitas Toko</option>
+                                <option value="Pameran Offline">Pameran Offline</option>
+                                <option value="Buzzer & Affiliate Toko">Buzzer & Affiliate Toko</option>
+                                <option value="Iklan Sosial Media">Iklan Sosial Media</option>
+                                <option value="SMS & Broadcast WA">SMS & Broadcast WA</option>
+                                <option value="Diskon Online Shop">Diskon Online Shop</option>
+                                <option value="Optimasi Search Engine">Optimasi Search Engine</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-3">Strategi 2</label>
+                            <select id="marketing2" onchange="updateStrategyCounter()" class="w-full p-4 border-4 border-blue-300 rounded-2xl bg-blue-50 font-semibold">
+                                <option value="">Pilih Strategi</option>
+                                <option value="Iklan Radio">Iklan Radio</option>
+                                <option value="Iklan Televisi">Iklan Televisi</option>
+                                <option value="Brosur, Billboard & OOH">Brosur, Billboard & OOH</option>
+                                <option value="Upgrade Fasilitas Toko">Upgrade Fasilitas Toko</option>
+                                <option value="Pameran Offline">Pameran Offline</option>
+                                <option value="Buzzer & Affiliate Toko">Buzzer & Affiliate Toko</option>
+                                <option value="Iklan Sosial Media">Iklan Sosial Media</option>
+                                <option value="SMS & Broadcast WA">SMS & Broadcast WA</option>
+                                <option value="Diskon Online Shop">Diskon Online Shop</option>
+                                <option value="Optimasi Search Engine">Optimasi Search Engine</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-3">Strategi 3</label>
+                            <select id="marketing3" onchange="updateStrategyCounter()" class="w-full p-4 border-4 border-blue-300 rounded-2xl bg-blue-50 font-semibold">
+                                <option value="">Pilih Strategi</option>
+                                <option value="Iklan Radio">Iklan Radio</option>
+                                <option value="Iklan Televisi">Iklan Televisi</option>
+                                <option value="Brosur, Billboard & OOH">Brosur, Billboard & OOH</option>
+                                <option value="Upgrade Fasilitas Toko">Upgrade Fasilitas Toko</option>
+                                <option value="Pameran Offline">Pameran Offline</option>
+                                <option value="Buzzer & Affiliate Toko">Buzzer & Affiliate Toko</option>
+                                <option value="Iklan Sosial Media">Iklan Sosial Media</option>
+                                <option value="SMS & Broadcast WA">SMS & Broadcast WA</option>
+                                <option value="Diskon Online Shop">Diskon Online Shop</option>
+                                <option value="Optimasi Search Engine">Optimasi Search Engine</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pengadaan Barang -->
+                <div class="bg-white rounded-3xl shadow-lg p-8 border-4 border-green-200">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">📦 Pengadaan Barang</h2>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-3">Supplier A</label>
+                            <input type="number" id="supplierA" min="0" value="0" class="w-full p-4 border-4 border-green-300 rounded-2xl bg-green-50 font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-3">Supplier B</label>
+                            <input type="number" id="supplierB" min="0" value="0" class="w-full p-4 border-4 border-green-300 rounded-2xl bg-green-50 font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-3">Supplier C</label>
+                            <input type="number" id="supplierC" min="0" value="0" class="w-full p-4 border-4 border-green-300 rounded-2xl bg-green-50 font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-3">Supplier D</label>
+                            <input type="number" id="supplierD" min="0" value="0" class="w-full p-4 border-4 border-green-300 rounded-2xl bg-green-50 font-semibold">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Penjualan Offline -->
+                <div class="bg-white rounded-3xl shadow-lg p-8 border-4 border-yellow-200">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">🏪 Penjualan Offline</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-3">Harga Offline (Rp)</label>
+                            <input type="number" id="hargaOffline" min="0" step="100" value="0" class="w-full p-4 border-4 border-yellow-300 rounded-2xl bg-yellow-50 font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-3">Pembeli Datang Terlayani</label>
+                            <input type="number" id="pembeliDatangTerlayaniOffline" min="0" value="0" class="w-full p-4 border-4 border-yellow-300 rounded-2xl bg-yellow-50 font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-3">Pembeli Tambahan</label>
+                            <input type="number" id="pembeliTambahanOffline" min="0" value="0" class="w-full p-4 border-4 border-yellow-300 rounded-2xl bg-yellow-50 font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-3">Pembeli Tambahan Terlayani</label>
+                            <input type="number" id="pembeliTambahanTerlayaniOffline" min="0" value="0" class="w-full p-4 border-4 border-yellow-300 rounded-2xl bg-yellow-50 font-semibold">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Penjualan Online -->
+                <div id="onlineSection" class="bg-white rounded-3xl shadow-lg p-8 border-4 border-pink-200">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-gray-800">🌐 Penjualan Online</h2>
+                        <span id="onlineStatus" class="px-4 py-2 rounded-full font-bold text-sm"></span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-3">Harga Online (Rp)</label>
+                            <input type="number" id="hargaOnline" min="0" step="100" value="0" class="w-full p-4 border-4 border-pink-300 rounded-2xl bg-pink-50 font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-3">Pembeli Datang Terlayani</label>
+                            <input type="number" id="pembeliDatangTerlayaniOnline" min="0" value="0" class="w-full p-4 border-4 border-pink-300 rounded-2xl bg-pink-50 font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-3">Pembeli Tambahan</label>
+                            <input type="number" id="pembeliTambahanOnline" min="0" value="0" class="w-full p-4 border-4 border-pink-300 rounded-2xl bg-pink-50 font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-lg font-bold text-gray-700 mb-3">Pembeli Tambahan Terlayani</label>
+                            <input type="number" id="pembeliTambahanTerlayaniOnline" min="0" value="0" class="w-full p-4 border-4 border-pink-300 rounded-2xl bg-pink-50 font-semibold">
+                        </div>
+                    </div>
+                    <div id="onlineMessage" class="mt-4 p-4 bg-gray-100 rounded-xl text-center text-gray-600 font-semibold hidden">
+                        🔒 Penjualan Online akan tersedia mulai Kuartil 5
+                    </div>
+                </div>
+                
+                <button onclick="saveDecision()" class="w-full bg-gradient-to-r from-yellow-300 to-orange-400 text-gray-800 px-12 py-5 rounded-3xl font-bold text-xl hover:from-yellow-400 hover:to-orange-500 transition-all shadow-xl border-4 border-yellow-500">
+                    💾 Simpan Keputusan Kuartil <span id="saveQuarter">1</span>
+                </button>
+            </div>
+
+            <!-- Summary Tab -->
+            <div id="summaryTab" class="hidden">
+                <div class="space-y-6">
+                    <div class="bg-white rounded-3xl shadow-lg p-8 border-4 border-purple-200">
+                        <h2 class="text-3xl font-bold text-gray-800 mb-6">📊 Ringkasan Pertandingan</h2>
+                        <div id="summaryTables"></div>
+                    </div>
+
+                    <div class="bg-white rounded-3xl shadow-lg p-8 border-4 border-green-200">
+                        <h2 class="text-3xl font-bold text-gray-800 mb-6">💰 Grafik Kas Tersedia</h2>
+                        <canvas id="kasChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Tab -->
+            <div id="reportTab" class="hidden">
+                <div class="bg-white rounded-3xl shadow-lg p-8 border-4 border-blue-200">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-gray-800">📄 Laporan Pemain</h2>
+                        <button onclick="downloadPDF()" class="bg-gradient-to-r from-blue-400 to-blue-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-blue-500 hover:to-blue-600 transition-all shadow-lg">
+                            📥 Download PDF
+                        </button>
+                    </div>
+                    <div id="reportContent" class="space-y-4"></div>
+                </div>
+            </div>
+
+            <!-- Leaderboard Tab -->
+            <div id="leaderboardTab" class="hidden">
+                <div class="bg-white rounded-3xl shadow-lg p-8 border-4 border-yellow-300">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">🏆 Leaderboard Tim <span id="leaderboardTeam"></span></h2>
+                    <div id="leaderboardContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxbdidzk92BdbwRZPGxgoVTAoVpwJ4-v9b9tuMV8cCLb_dEqyE32mkH9S7Ub1yhHjs/exec';
+        function getOpponent(kelompok) {
+            const pairs = {
+                'A': 'B', 'B': 'A',
+                'C': 'D', 'D': 'C',
+                'E': 'F', 'F': 'E',
+                'G': 'H', 'H': 'G'
+            };
+            return pairs[kelompok] || '';
+        }
+
+        const STRATEGIES = [
+            'Iklan Radio',
+            'Iklan Televisi',
+            'Brosur, Billboard & OOH',
+            'Upgrade Fasilitas Toko',
+            'Pameran Offline',
+            'Buzzer & Affiliate Toko',
+            'Iklan Sosial Media',
+            'SMS & Broadcast WA',
+            'Diskon Online Shop',
+            'Optimasi Search Engine'
+        ];
+
+        let currentUser = null;
+        let currentQuarter = 1;
+        let strategyUsage = {};
+        let decisions = [];
+
+        // Initialize
+        window.onload = function() {
+            checkAuth();
+            
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            document.getElementById('authTanggal').value = `${yyyy}-${mm}-${dd}`;
+            
+            const hh = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('authWaktu').value = `${hh}:${min}`;
+            
+            STRATEGIES.forEach(s => strategyUsage[s] = 0);
+            updateStrategyCounterDisplay();
+            updateOnlineAvailability();
+        };
+
+        function checkAuth() {
+            const user = localStorage.getItem('rssUser');
+            if (user) {
+                currentUser = JSON.parse(user);
+                showMainApp();
+                loadUserData();
+            }
+        }
+
+        async function handleRegister() {
+            const username = document.getElementById('authUsername').value.trim();
+            const level = document.getElementById('authLevel').value;
+            const kelompok = document.getElementById('authKelompok').value;
+            const tanggal = document.getElementById('authTanggal').value;
+            const waktu = document.getElementById('authWaktu').value;
+
+            if (!username) {
+                alert('⚠️ Mohon masukkan username!');
+                return;
+            }
+
+            if (!level) {
+                alert('⚠️ Mohon pilih level permainan!');
+                return;
+            }
+
+            if (!kelompok) {
+                alert('⚠️ Mohon pilih kelompok!');
+                return;
+            }
+
+            if (!tanggal || !waktu) {
+                alert('⚠️ Mohon isi tanggal dan waktu!');
+                return;
+            }
+
+            const kelompokKey = `${level.toUpperCase()}_${kelompok}`;
+            currentUser = {
+                username,
+                level,
+                kelompok,
+                tanggal_main: tanggal,
+                waktu_main: waktu,
+                opponent: getOpponent(kelompok)
+            };
+
+            localStorage.setItem('rssUser', JSON.stringify(currentUser));
+            showMainApp();
+            alert('✅ Registrasi berhasil! Selamat bermain, ' + username + '!');
+        }
+
+        async function handleLogin() {
+            const username = document.getElementById('authUsername').value;
+            if (!username) {
+                alert('⚠️ Mohon masukkan username!');
+                return;
+            }
+
+            const storedUser = localStorage.getItem('rssUser');
+            if (storedUser) {
+                const user = JSON.parse(storedUser);
+                if (user.username === username) {
+                    currentUser = user;
+                    showMainApp();
+                    loadUserData();
+                    alert('✅ Login berhasil!');
+                } else {
+                    alert('❌ Username tidak ditemukan!');
+                }
+            } else {
+                alert('❌ Belum ada user terdaftar!');
+            }
+        }
+
+        function handleLogout() {
+            if (confirm('Yakin ingin logout?')) {
+                localStorage.removeItem('rssUser');
+                location.reload();
+            }
+        }
+
+        function showMainApp() {
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            
+            const levelEmoji = {
+                'easy': '🟢',
+                'medium': '🟡',
+                'hard': '🔴'
+            };
+            
+            const levelText = currentUser.level ? `${levelEmoji[currentUser.level]} ${currentUser.level.charAt(0).toUpperCase() + currentUser.level.slice(1)}` : '';
+            
+            document.getElementById('userInfo').textContent = 
+                `${currentUser.username} (${levelText} - Kelompok ${currentUser.kelompok})`;
+            document.getElementById('opponentInfo').textContent = currentUser.opponent;
+            document.getElementById('leaderboardTeam').textContent = 
+                `${currentUser.kelompok} vs ${currentUser.opponent}`;
+        }
+
+        async function saveDecision() {
+            const marketing1 = document.getElementById('marketing1').value;
+            const marketing2 = document.getElementById('marketing2').value;
+            const marketing3 = document.getElementById('marketing3').value;
+
+            if (!marketing1 || !marketing2 || !marketing3) {
+                alert('⚠️ Mohon lengkapi semua strategi pemasaran!');
+                return;
+            }
+
+            const selectedStrategies = [marketing1, marketing2, marketing3];
+            const tempUsage = {...strategyUsage};
+            
+            for (let strategy of selectedStrategies) {
+                tempUsage[strategy]++;
+                if (tempUsage[strategy] > 3) {
+                    alert(`❌ Strategi "${strategy}" sudah digunakan 3 kali! Pilih strategi lain.`);
+                    return;
+                }
+            }
+
+            const supplierA = parseInt(document.getElementById('supplierA').value) || 0;
+            const supplierB = parseInt(document.getElementById('supplierB').value) || 0;
+            const supplierC = parseInt(document.getElementById('supplierC').value) || 0;
+            const supplierD = parseInt(document.getElementById('supplierD').value) || 0;
+            const hargaOffline = parseInt(document.getElementById('hargaOffline').value) || 0;
+            const pembeliDatangTerlayaniOffline = parseInt(document.getElementById('pembeliDatangTerlayaniOffline').value) || 0;
+            const pembeliTambahanOffline = parseInt(document.getElementById('pembeliTambahanOffline').value) || 0;
+            const pembeliTambahanTerlayaniOffline = parseInt(document.getElementById('pembeliTambahanTerlayaniOffline').value) || 0;
+
+            let hargaOnline = 0;
+            let pembeliDatangTerlayaniOnline = 0;
+            let pembeliTambahanOnline = 0;
+            let pembeliTambahanTerlayaniOnline = 0;
+            
+            if (currentQuarter >= 5) {
+                hargaOnline = parseInt(document.getElementById('hargaOnline').value) || 0;
+                pembeliDatangTerlayaniOnline = parseInt(document.getElementById('pembeliDatangTerlayaniOnline').value) || 0;
+                pembeliTambahanOnline = parseInt(document.getElementById('pembeliTambahanOnline').value) || 0;
+                pembeliTambahanTerlayaniOnline = parseInt(document.getElementById('pembeliTambahanTerlayaniOnline').value) || 0;
+            }
+
+            const decision = {
+                kuartil: currentQuarter,
+                marketing_1: marketing1,
+                marketing_2: marketing2,
+                marketing_3: marketing3,
+                supplier_a: supplierA,
+                supplier_b: supplierB,
+                supplier_c: supplierC,
+                supplier_d: supplierD,
+                harga_offline: hargaOffline,
+                pembeli_datang_terlayani_offline: pembeliDatangTerlayaniOffline,
+                pembeli_tambahan_offline: pembeliTambahanOffline,
+                pembeli_tambahan_terlayani_offline: pembeliTambahanTerlayaniOffline,
+                harga_online: hargaOnline,
+                pembeli_datang_terlayani_online: pembeliDatangTerlayaniOnline,
+                pembeli_tambahan_online: pembeliTambahanOnline,
+                pembeli_tambahan_terlayani_online: pembeliTambahanTerlayaniOnline,
+                timestamp: new Date().toISOString()
+            };
+
+            strategyUsage = tempUsage;
+            decisions.push(decision);
+            
+            localStorage.setItem(`rss_decisions_${currentUser.username}`, JSON.stringify(decisions));
+            localStorage.setItem(`rss_strategy_${currentUser.username}`, JSON.stringify(strategyUsage));
+
+            try {
+                await sendToGoogleSheets(decision);
+                alert('✅ Keputusan kuartil ' + currentQuarter + ' berhasil disimpan ke Google Sheets!');
+            } catch (error) {
+                console.error('Google Sheets error:', error);
+            }
+            
+            if (currentQuarter < 8) {
+                currentQuarter++;
+                updateQuarter();
+                clearForm();
+                updateStrategyCounterDisplay();
+            } else {
+                alert('🎉 Semua kuartil telah selesai! Lihat tab Ringkasan untuk hasil akhir.');
+            }
+        }
+
+    async function sendToGoogleSheets(decision) {
+        try {
+            const payload = {
+                kelompok: currentUser.kelompok,
+                level: currentUser.level,   // e.g. "easy" -> server uppercases
+                decision: decision
+            };
+
+            console.log('Sending payload to API:', API_URL, payload);
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                // DO NOT use mode: 'no-cors'
+                body: JSON.stringify(payload)
+            });
+
+            // If fetch succeeded but server returned non-JSON (rare), handle that
+            const text = await response.text();
+            let json = null;
+            try {
+                json = JSON.parse(text);
+            } catch (err) {
+                console.warn('Response not JSON:', text);
+                throw new Error('Server returned non-JSON response: ' + text);
+            }
+
+            if (!json || !json.success) {
+                console.error('Server returned error:', json);
+                throw new Error(json && json.error ? json.error : 'Unknown server error');
+            }
+
+            console.log('✅ Data saved to Google Sheets:', json);
+            return json;
+
+        } catch (error) {
+            console.error('❌ Error sending to Google Sheets:', error);
+            // inform user but do not block local save
+            alert('⚠️ Data tersimpan lokal, tapi gagal mengirim ke Google Sheets: ' + error.message);
+            throw error;
+        }
+    }
+
+
+        function updateStrategyCounter() {
+            // Preview only, actual increment happens on save
+        }
+
+        function updateStrategyCounterDisplay() {
+            const container = document.getElementById('strategyCounter');
+            let html = '';
+            
+            STRATEGIES.forEach(strategy => {
+                const count = strategyUsage[strategy] || 0;
+                const color = count >= 3 ? 'bg-red-200 text-red-800' : 
+                             count >= 2 ? 'bg-yellow-200 text-yellow-800' : 
+                             'bg-green-200 text-green-800';
+                
+                html += `
+                    <div class="p-3 rounded-lg ${color} text-center">
+                        <div class="font-bold text-xs mb-1">${strategy}</div>
+                        <div class="text-lg font-bold">${count}/3</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function clearForm() {
+            document.getElementById('marketing1').value = '';
+            document.getElementById('marketing2').value = '';
+            document.getElementById('marketing3').value = '';
+            document.getElementById('supplierA').value = '0';
+            document.getElementById('supplierB').value = '0';
+            document.getElementById('supplierC').value = '0';
+            document.getElementById('supplierD').value = '0';
+            document.getElementById('hargaOffline').value = '0';
+            document.getElementById('pembeliDatangTerlayaniOffline').value = '0';
+            document.getElementById('pembeliTambahanOffline').value = '0';
+            document.getElementById('pembeliTambahanTerlayaniOffline').value = '0';
+            document.getElementById('hargaOnline').value = '0';
+            document.getElementById('pembeliDatangTerlayaniOnline').value = '0';
+            document.getElementById('pembeliTambahanOnline').value = '0';
+            document.getElementById('pembeliTambahanTerlayaniOnline').value = '0';
+        }
+
+        function loadUserData() {
+            const savedDecisions = localStorage.getItem(`rss_decisions_${currentUser.username}`);
+            const savedStrategy = localStorage.getItem(`rss_strategy_${currentUser.username}`);
+            
+            if (savedDecisions) {
+                decisions = JSON.parse(savedDecisions);
+                currentQuarter = decisions.length + 1;
+                updateQuarter();
+            }
+            
+            if (savedStrategy) {
+                strategyUsage = JSON.parse(savedStrategy);
+                updateStrategyCounterDisplay();
+            }
+
+            updateOnlineAvailability();
+        }
+
+        async function loadSummary() {
+            const container = document.getElementById('summaryTables');
+            
+            if (decisions.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8">Belum ada data keputusan</p>';
+                return;
+            }
+
+            displaySummaryTables();
+            displayKasChart();
+        }
+
+        function displaySummaryTables() {
+            const container = document.getElementById('summaryTables');
+            
+            let html = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <h3 class="text-xl font-bold text-blue-600 mb-3">Tim ${currentUser.kelompok} (Anda)</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm border-collapse">
+                                <thead class="bg-blue-100">
+                                    <tr>
+                                        <th class="p-2 border">Kuartil</th>
+                                        <th class="p-2 border">Status</th>
+                                        <th class="p-2 border">Kas Tersedia</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+            
+            for (let i = 1; i <= 8; i++) {
+                const decision = decisions.find(d => d.kuartil === i);
+                const status = decision ? '✅ Ya' : '❌ Tidak';
+                const statusColor = decision ? 'text-green-600' : 'text-red-600';
+                const kas = decision ? 'Data dari Sheet' : '-';
+                const bgColor = i % 2 === 0 ? 'bg-gray-50' : '';
+                
+                html += `
+                    <tr class="${bgColor}">
+                        <td class="p-2 border text-center font-bold">${i}</td>
+                        <td class="p-2 border text-center ${statusColor} font-bold">${status}</td>
+                        <td class="p-2 border text-right">${kas}</td>
+                    </tr>
+                `;
+            }
+            
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-xl font-bold text-red-600 mb-3">Tim ${currentUser.opponent} (Lawan)</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm border-collapse">
+                                <thead class="bg-red-100">
+                                    <tr>
+                                        <th class="p-2 border">Kuartil</th>
+                                        <th class="p-2 border">Status</th>
+                                        <th class="p-2 border">Kas Tersedia</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+            
+            for (let i = 1; i <= 8; i++) {
+                const bgColor = i % 2 === 0 ? 'bg-gray-50' : '';
+                html += `
+                    <tr class="${bgColor}">
+                        <td class="p-2 border text-center font-bold">${i}</td>
+                        <td class="p-2 border text-center text-gray-500">Data dari Sheet</td>
+                        <td class="p-2 border text-right">Data dari Sheet</td>
+                    </tr>
+                `;
+            }
+            
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        let kasChart = null;
+
+        function displayKasChart() {
+            const ctx = document.getElementById('kasChart').getContext('2d');
+            const sheetConfig = currentUser.sheetConfig;
+            
+            const kuartils = [1, 2, 3, 4, 5, 6, 7, 8];
+            const kasP1 = decisions.map((d, i) => 50000000 + (i * 10000000));
+            const kasP2 = [10000000, 20000000, 30000000, 40000000, 50000000, 60000000, 70000000, 80000000];
+            
+            if (kasChart) kasChart.destroy();
+            
+            kasChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: kuartils.map(k => `Kuartil ${k}`),
+                    datasets: [{
+                        label: `Tim ${currentUser.kelompok} (Anda)`,
+                        data: kasP1,
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        borderWidth: 3
+                    }, {
+                        label: `Tim ${currentUser.opponent} (Lawan)`,
+                        data: kasP2,
+                        borderColor: 'rgb(239, 68, 68)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        tension: 0.4,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { 
+                            position: 'top',
+                            labels: { font: { size: 14, weight: 'bold' } }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Perbandingan Kas Tersedia Per Kuartil',
+                            font: { size: 16, weight: 'bold' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'Rp ' + (value / 1000000).toFixed(0) + ' Jt';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadReport() {
+            const container = document.getElementById('reportContent');
+            const reportSheet = `${player} - Laporan Pemain`;
+            
+            container.innerHTML = `
+                <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-2xl border-2 border-blue-300">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4">📋 Laporan ${currentUser.kelompok}</h3>
+                    <p class="text-gray-600 mb-4">Sheet: <code class="bg-white px-2 py-1 rounded">${reportSheet}</code></p>
+                    
+                    <div class="space-y-4">
+                        <div class="bg-white p-4 rounded-xl border-2 border-gray-200">
+                            <h4 class="font-bold text-lg mb-2">Ringkasan Permainan</h4>
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span class="text-gray-600">Username:</span>
+                                    <span class="font-bold ml-2">${currentUser.username}</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-600">Level:</span>
+                                    <span class="font-bold ml-2">${currentUser.level ? currentUser.level.toUpperCase() : 'N/A'}</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-600">Kelompok:</span>
+                                    <span class="font-bold ml-2">${currentUser.kelompok}</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-600">Tanggal Main:</span>
+                                    <span class="font-bold ml-2">${currentUser.tanggal_main}</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-600">Waktu Main:</span>
+                                    <span class="font-bold ml-2">${currentUser.waktu_main}</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-600">Kuartil Selesai:</span>
+                                    <span class="font-bold ml-2">${decisions.length}/8</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-600">Lawan:</span>
+                                    <span class="font-bold ml-2">Tim ${currentUser.opponent}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-xl border-2 border-gray-200">
+                            <h4 class="font-bold text-lg mb-3">Strategi Marketing yang Digunakan</h4>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+            `;
+            
+            Object.entries(strategyUsage).forEach(([strategy, count]) => {
+                if (count > 0) {
+                    const color = count >= 3 ? 'bg-red-100 text-red-800' : 
+                                 count >= 2 ? 'bg-yellow-100 text-yellow-800' : 
+                                 'bg-green-100 text-green-800';
+                    container.innerHTML += `
+                        <div class="${color} p-2 rounded font-bold">
+                            ${strategy}: ${count}x
+                        </div>
+                    `;
+                }
+            });
+            
+            container.innerHTML += `
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-xl border-2 border-gray-200">
+                            <h4 class="font-bold text-lg mb-3">Detail Keputusan Per Kuartil</h4>
+                            <div class="space-y-3 max-h-96 overflow-y-auto">
+            `;
+            
+            decisions.forEach(decision => {
+                container.innerHTML += `
+                    <div class="border-l-4 border-blue-500 pl-4 py-2 bg-gray-50 rounded">
+                        <div class="font-bold text-blue-600 mb-2">Kuartil ${decision.kuartil}</div>
+                        <div class="text-sm space-y-1">
+                            <div><span class="text-gray-600">Marketing:</span> ${decision.marketing_1}, ${decision.marketing_2}, ${decision.marketing_3}</div>
+                            <div><span class="text-gray-600">Supplier:</span> A=${decision.supplier_a}, B=${decision.supplier_b}, C=${decision.supplier_c}, D=${decision.supplier_d}</div>
+                            <div><span class="text-gray-600">Harga:</span> Offline=Rp${decision.harga_offline.toLocaleString('id-ID')}, Online=Rp${decision.harga_online.toLocaleString('id-ID')}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML += `
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function downloadPDF() {
+            alert('📥 Fitur download PDF akan mengambil data dari sheet "' + 
+                  currentUser.player + ' - Laporan Pemain" dan mengkonversinya ke PDF.');
+        }
+
+        async function loadLeaderboard() {
+            const container = document.getElementById('leaderboardContent');
+            const sheetConfig = currentUser.sheetConfig;
+            
+            const leaderboard = [
+                { kelompok: currentUser.kelompok, kuartil: decisions.length, kas: 150000000 },
+                { kelompok: currentUser.opponent, kuartil: 5, kas: 120000000 }
+            ].sort((a, b) => b.kas - a.kas);
+            
+            let html = `
+                <table class="w-full">
+                    <thead class="bg-gradient-to-r from-yellow-200 to-orange-200">
+                        <tr>
+                            <th class="p-4 text-left">🏅 Rank</th>
+                            <th class="p-4 text-left">Kelompok</th>
+                            <th class="p-4 text-left">Username</th>
+                            <th class="p-4 text-center">Kuartil Selesai</th>
+                            <th class="p-4 text-right">Kas Tertinggi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            leaderboard.forEach((player, idx) => {
+                const medal = idx === 0 ? '🥇' : '🥈';
+                const highlight = player.kelompok === currentUser.kelompok ? 'bg-blue-100 font-bold' : '';
+                
+                html += `
+                    <tr class="border-b hover:bg-yellow-50 ${highlight}">
+                        <td class="p-4 text-2xl">${medal}</td>
+                        <td class="p-4 text-lg font-bold text-blue-600">${player.kelompok}</td>
+                        <td class="p-4">${player.username}</td>
+                        <td class="p-4 text-center font-bold">${player.kuartil}/8</td>
+                        <td class="p-4 text-right text-green-600 font-bold text-lg">
+                            Rp ${(player.kas / 1000000).toFixed(1)} Jt
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function showTab(tab) {
+            ['inputTab', 'summaryTab', 'reportTab', 'leaderboardTab'].forEach(t => {
+                document.getElementById(t).classList.add('hidden');
+            });
+            ['tabInput', 'tabSummary', 'tabReport', 'tabLeaderboard'].forEach(t => {
+                document.getElementById(t).className = 'py-4 px-8 font-bold rounded-t-2xl transition-all bg-gray-50 text-gray-500 hover:bg-gray-100';
+            });
+
+            document.getElementById(tab + 'Tab').classList.remove('hidden');
+            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).className = 
+                'py-4 px-8 font-bold rounded-t-2xl transition-all bg-gradient-to-b from-blue-200 to-blue-100 text-blue-800 shadow-inner';
+
+            if (tab === 'summary') {
+                loadSummary();
+            } else if (tab === 'report') {
+                loadReport();
+            } else if (tab === 'leaderboard') {
+                loadLeaderboard();
+            }
+        }
+
+        function updateQuarter() {
+            document.getElementById('currentQuarter').textContent = currentQuarter;
+            document.getElementById('saveQuarter').textContent = currentQuarter;
+            updateOnlineAvailability();
+        }
+
+        function updateOnlineAvailability() {
+            const hargaOnline = document.getElementById('hargaOnline');
+            const pembeliDatangOnline = document.getElementById('pembeliDatangTerlayaniOnline');
+            const pembeliTambahanOnline = document.getElementById('pembeliTambahanOnline');
+            const pembeliTambahanTerlayaniOnline = document.getElementById('pembeliTambahanTerlayaniOnline');
+            const onlineMessage = document.getElementById('onlineMessage');
+            const onlineStatus = document.getElementById('onlineStatus');
+            const onlineSection = document.getElementById('onlineSection');
+
+            const onlineInputs = [hargaOnline, pembeliDatangOnline, pembeliTambahanOnline, pembeliTambahanTerlayaniOnline];
+
+            if (currentQuarter >= 5) {
+                onlineInputs.forEach(input => {
+                    input.disabled = false;
+                    input.classList.remove('opacity-50', 'cursor-not-allowed');
+                });
+                onlineMessage.classList.add('hidden');
+                onlineStatus.textContent = '✅ Aktif';
+                onlineStatus.className = 'px-4 py-2 rounded-full font-bold text-sm bg-green-200 text-green-800';
+                onlineSection.classList.remove('opacity-60');
+            } else {
+                onlineInputs.forEach(input => {
+                    input.disabled = true;
+                    input.value = '0';
+                    input.classList.add('opacity-50', 'cursor-not-allowed');
+                });
+                onlineMessage.classList.remove('hidden');
+                onlineStatus.textContent = '🔒 Kuartil 5-8';
+                onlineStatus.className = 'px-4 py-2 rounded-full font-bold text-sm bg-gray-200 text-gray-600';
+                onlineSection.classList.add('opacity-60');
+            }
+        }
+    </script>
+</body>
+</html>
