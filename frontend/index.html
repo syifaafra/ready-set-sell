@@ -453,7 +453,7 @@
             </div>
             <div id="leaderboardTab" class="hidden">
                 <div class="bg-csv-light-fill rounded-3xl shadow-lg p-8 border-4 border-csv-accent">
-                    <h2 class="text-3xl font-bold text-csv-dark mb-6">🏆 Leaderboard Kelompok <span id="leaderboardTeam"></span></h2>
+                    <h2 class="text-3xl font-bold text-csv-dark mb-6">🏆 Leaderboard Kelompok<span id="leaderboardTeam"></span></h2>
                     <div id="leaderboardContent"></div>
                 </div>
             </div>
@@ -552,7 +552,7 @@
                 decisions = savedDecisions ? JSON.parse(savedDecisions) : [];
                 document.getElementById('authModal').classList.add('hidden');
                 document.getElementById('mainApp').classList.remove('hidden');
-                document.getElementById('userInfo').textContent = `Kelompok${currentUser.kelompok} (${currentUser.level})`;
+                document.getElementById('userInfo').textContent = `Kelompok ${currentUser.kelompok} (${currentUser.level})`;
                 document.getElementById('opponentInfo').textContent = getOpponent(currentUser.kelompok);
                 document.getElementById('reportTeam').textContent = currentUser.kelompok;
                 document.getElementById('leaderboardTeam').textContent = currentUser.kelompok;
@@ -581,7 +581,7 @@
             // Check if there are existing decisions and load them if needed. 
             // For simplicity in this fix, we will re-run checkAuth to initialize.
             checkAuth();
-            alert(`Selamat datang, Kelompok${kelompok} (${level})!`);
+            alert(`Selamat datang, Kelompok ${kelompok} (${level})!`);
         }
 
         function handleLogout() {
@@ -1156,7 +1156,7 @@
                 data: {
                     labels: chartLabels,
                     datasets: [{
-                        label: `Kelompok${currentUser.kelompok} (Kas Tersedia)`,
+                        label: `Kelompok ${currentUser.kelompok} (Kas Tersedia)`,
                         data: cashflowData,
                         borderColor: '#BC9D87',
                         backgroundColor: '#BC9D8733',
