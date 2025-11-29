@@ -1,0 +1,1881 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ready Set Sell - Companion App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body { 
+            font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', cursive; 
+            background: linear-gradient(to bottom right, #E0F1FF, #F8E7BE); 
+        }
+        input[type="time"]::-webkit-datetime-edit-ampm-field { display: none; }
+        .strategy-used { opacity: 0.5; pointer-events: none; }
+        .bg-csv-main { background-color: #E0F1FF; }
+        .text-csv-dark { color: #4C4644; }
+        .border-csv-highlight { border-color: #BC9D87; }
+        .bg-csv-accent { background-color: #F9CD91; }
+        .bg-csv-secondary { background-color: #E9D9C3; }
+        .text-csv-secondary-dark { color: #786F68; }
+        .bg-csv-cold-accent { background-color: #C7C9C6; }
+        .border-csv-cold-accent { border-color: #C7C9C6; }
+        .bg-csv-light-fill { background-color: #F8E7BE; }
+        .price-range-helper {
+            font-size: 0.875rem; /* text-sm */
+            color: #BC9D87; /* text-csv-highlight */
+            margin-top: 0.5rem;
+            display: block;
+        }
+        .price-range-helper.error {
+            color: #ef4444; /* text-red-500 */
+            font-weight: bold;
+        }
+        
+        /* Loading Overlay */
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #loadingOverlay.show {
+            display: flex;
+        }
+        
+        .loading-content {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        /* Spinner Animation */
+        .spinner {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 20px;
+            border: 6px solid #E9D9C3;
+            border-top: 6px solid #BC9D87;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Pulsing Dots */
+        .loading-dots {
+            display: inline-block;
+        }
+        
+        .loading-dots span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            margin: 0 2px;
+            background: #BC9D87;
+            border-radius: 50%;
+            animation: pulse 1.4s infinite ease-in-out both;
+        }
+        
+        .loading-dots span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+        
+        .loading-dots span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+        
+        @keyframes pulse {
+            0%, 80%, 100% { 
+                transform: scale(0);
+                opacity: 0.5;
+            }
+            40% { 
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    
+    <div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-csv-light-fill rounded-3xl shadow-2xl p-8 max-w-md w-full mx-4 border-4 border-csv-accent">
+            <h2 class="text-3xl font-bold text-csv-dark mb-6 text-center">🎮 Ready, Set, Sell!</h2>
+            
+            <div class="space-y-4">
+                
+                <div>
+                    <label class="block text-lg font-bold text-csv-secondary-dark mb-2">Level Permainan</label>
+                    <select id="authLevel" onchange="updateKelompokOptions()" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                        <option value="">Pilih Level</option>
+                        <option value="easy">🟢 Easy</option>
+                        <option value="medium">🟡 Medium</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-lg font-bold text-csv-secondary-dark mb-2">Kelompok</label>
+                    <select id="authKelompok" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                        <option value="">Pilih Level Terlebih Dahulu</option>
+                    </select>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-lg font-bold text-csv-secondary-dark mb-2">Tanggal</label>
+                        <input type="date" id="authTanggal" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-cold-accent font-semibold" readonly style="background-color: #C7C9C6;">
+                    </div>
+                    <div>
+                        <label class="block text-lg font-bold text-csv-secondary-dark mb-2">Waktu</label>
+                        <input type="time" id="authWaktu" step="60" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-secondary font-semibold" required>
+                    </div>
+                </div>
+                
+                <button onclick="handleRegister()" class="w-full bg-gradient-to-r from-csv-accent to-csv-highlight text-csv-dark px-6 py-4 rounded-2xl font-bold hover:from-csv-highlight hover:to-csv-accent transition-all shadow-lg border-4 border-csv-highlight">
+                    Mulai Bermain
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mainApp" class="hidden">
+        <div class="bg-gradient-to-r from-csv-accent via-csv-highlight to-csv-secondary text-csv-dark p-8 shadow-lg relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-40 h-40 bg-csv-light-fill opacity-20 rounded-full -mr-20 -mt-20"></div>
+            <div class="absolute bottom-0 left-0 w-32 h-32 bg-csv-light-fill opacity-20 rounded-full -ml-16 -mb-16"></div>
+            <div class="relative z-10 flex justify-between items-center">
+                <div>
+                    <h1 class="text-4xl font-bold mb-2">Ready, Set, Sell! 🎮</h1>
+                    <p class="text-csv-dark text-lg">
+                        <span id="userInfo"></span> - Kuartil <span id="currentQuarter">1</span>
+                    </p>
+                    <p class="text-csv-secondary-dark text-sm mt-1">Lawan: Kelompok <span id="opponentInfo"></span></p>
+                </div>
+                <div id="inventoryInfo" class="text-right text-sm p-3 bg-csv-main rounded-xl shadow-inner border border-csv-highlight hidden sm:block">
+                    <p class="font-bold text-csv-dark">Memuat Data Keuangan...</p>
+                </div>
+                <button onclick="handleLogout()" class="bg-csv-light-fill bg-opacity-50 px-6 py-3 rounded-2xl font-bold hover:bg-opacity-70 transition-all shadow-md">
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-csv-light-fill shadow-md">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex space-x-4">
+                    <button onclick="showTab('input')" id="tabInput" class="py-4 px-8 font-bold rounded-t-2xl transition-all bg-gradient-to-b from-csv-cold-accent to-csv-main text-csv-dark shadow-inner">
+                        📝 Input Keputusan
+                    </button>
+                    <button onclick="showTab('summary')" id="tabSummary" class="py-4 px-8 font-bold rounded-t-2xl transition-all bg-gray-50 text-gray-500 hover:bg-gray-100">
+                        📊 Ringkasan
+                    </button>
+                    <button onclick="showTab('report')" id="tabReport" class="py-4 px-8 font-bold rounded-t-2xl transition-all bg-gray-50 text-gray-500 hover:bg-gray-100">
+                        📄 Laporan
+                    </button>
+                    <button onclick="showTab('leaderboard')" id="tabLeaderboard" class="py-4 px-8 font-bold rounded-t-2xl transition-all bg-gray-50 text-gray-500 hover:bg-gray-100">
+                        🏆 Leaderboard
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto p-6">
+            <div id="inputTab" class="space-y-6">
+                <div class="bg-gradient-to-r from-csv-accent to-csv-light-fill rounded-3xl shadow-lg p-6 border-4 border-csv-highlight">
+                    <h3 class="text-xl font-bold text-csv-dark mb-3">📋 Penggunaan Strategi Marketing</h3>
+                    <p class="text-csv-secondary-dark mb-3">Setiap strategi hanya dapat dipilih maksimal 3 kali selama 8 kuartil</p>
+                    <div id="strategyCounter" class="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm"></div>
+                </div>
+
+                <div class="bg-csv-light-fill rounded-3xl shadow-lg p-8 border-4 border-csv-cold-accent">
+                    <h2 class="text-3xl font-bold text-csv-dark mb-6">📈 Strategi Pemasaran</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Strategi 1</label>
+                            <select id="marketing1" onchange="updateStrategyCounter()" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                                <option value="">Pilih Strategi</option>
+                                <option value="Iklan Radio">Iklan Radio</option>
+                                <option value="Iklan Televisi">Iklan Televisi</option>
+                                <option value="Brosur, Billboard & OOH">Brosur, Billboard & OOH</option>
+                                <option value="Upgrade Fasilitas Toko">Upgrade Fasilitas Toko</option>
+                                <option value="Pameran Offline">Pameran Offline</option>
+                                <option value="Buzzer & Affiliate Toko">Buzzer & Affiliate Toko</option>
+                                <option value="Iklan Sosial Media">Iklan Sosial Media</option>
+                                <option value="SMS & Broadcast WA">SMS & Broadcast WA</option>
+                                <option value="Diskon Online Shop">Diskon Online Shop</option>
+                                <option value="Optimasi Search Engine">Optimasi Search Engine</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Strategi 2</label>
+                            <select id="marketing2" onchange="updateStrategyCounter()" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                                <option value="">Pilih Strategi</option>
+                                <option value="Iklan Radio">Iklan Radio</option>
+                                <option value="Iklan Televisi">Iklan Televisi</option>
+                                <option value="Brosur, Billboard & OOH">Brosur, Billboard & OOH</option>
+                                <option value="Upgrade Fasilitas Toko">Upgrade Fasilitas Toko</option>
+                                <option value="Pameran Offline">Pameran Offline</option>
+                                <option value="Buzzer & Affiliate Toko">Buzzer & Affiliate Toko</option>
+                                <option value="Iklan Sosial Media">Iklan Sosial Media</option>
+                                <option value="SMS & Broadcast WA">SMS & Broadcast WA</option>
+                                <option value="Diskon Online Shop">Diskon Online Shop</option>
+                                <option value="Optimasi Search Engine">Optimasi Search Engine</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Strategi 3</label>
+                            <select id="marketing3" onchange="updateStrategyCounter()" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                                <option value="">Pilih Strategi</option>
+                                <option value="Iklan Radio">Iklan Radio</option>
+                                <option value="Iklan Televisi">Iklan Televisi</option>
+                                <option value="Brosur, Billboard & OOH">Brosur, Billboard & OOH</option>
+                                <option value="Upgrade Fasilitas Toko">Upgrade Fasilitas Toko</option>
+                                <option value="Pameran Offline">Pameran Offline</option>
+                                <option value="Buzzer & Affiliate Toko">Buzzer & Affiliate Toko</option>
+                                <option value="Iklan Sosial Media">Iklan Sosial Media</option>
+                                <option value="SMS & Broadcast WA">SMS & Broadcast WA</option>
+                                <option value="Diskon Online Shop">Diskon Online Shop</option>
+                                <option value="Optimasi Search Engine">Optimasi Search Engine</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex justify-end mt-4">
+                        <button type="button" onclick="saveMarketingOnly()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300 shadow-md">
+                            Simpan Pemasaran Saja
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-csv-light-fill rounded-3xl shadow-lg p-8 border-4 border-csv-secondary">
+                    <h2 class="text-3xl font-bold text-csv-dark mb-6">📦 Pengadaan Barang</h2>
+                    
+                    <div id="inventoryASection" class="mb-8">
+                        <h3 class="text-xl font-bold text-csv-dark mb-4 bg-blue-100 p-3 rounded-xl">🔵 Produk A</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Supplier A</label>
+                                <input type="number" id="supplierA_A" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Supplier B</label>
+                                <input type="number" id="supplierB_A" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Supplier C</label>
+                                <input type="number" id="supplierC_A" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Supplier D</label>
+                                <input type="number" id="supplierD_A" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="inventoryBSection">
+                        <h3 class="text-xl font-bold text-csv-dark mb-4 bg-green-100 p-3 rounded-xl">🟢 Produk B <span class="text-sm font-normal text-csv-secondary-dark">(Medium: K5-7 pengadaan, K5-8 penjualan)</span></h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Supplier A</label>
+                                <input type="number" id="supplierA_B" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Supplier B</label>
+                                <input type="number" id="supplierB_B" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Supplier C</label>
+                                <input type="number" id="supplierC_B" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Supplier D</label>
+                                <input type="number" id="supplierD_B" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                        </div>
+                        <div id="inventoryBMessage" class="mt-4 p-4 bg-csv-cold-accent rounded-xl text-center text-csv-dark font-semibold hidden">
+                            🔒 Pengadaan Produk B tersedia Medium K5-7
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-csv-light-fill rounded-3xl shadow-lg p-8 border-4 border-csv-accent">
+                    <h2 class="text-3xl font-bold text-csv-dark mb-6">🪙 Penjualan Offline</h2>
+                    
+                    <div id="offlineASection" class="mb-8">
+                        <h3 class="text-xl font-bold text-csv-dark mb-4 bg-blue-100 p-3 rounded-xl">🔵 Produk A</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Harga Offline (Rp)</label>
+                                <input type="text" id="harga_offline_A" class="format-rupiah w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                                <span class="price-range-helper">Range : Rp 3.000.000 - Rp 5.000.000</span>
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Pembeli Datang Terlayani</label>
+                                <input type="number" id="pembeli_datang_terlayani_offline_A" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Pembeli Tambahan</label>
+                                <input type="number" id="pembeli_tambahan_offline_A" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Pembeli Tambahan Terlayani</label>
+                                <input type="number" id="pembeli_tambahan_terlayani_offline_A" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="offlineBSection">
+                        <h3 class="text-xl font-bold text-csv-dark mb-4 bg-green-100 p-3 rounded-xl">🟢 Produk B</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Harga Offline (Rp)</label>
+                                <input type="text" id="harga_offline_B"  value="0" class="format-rupiah w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                                <span class="price-range-helper">Range : Rp 3.000.000 - Rp 5.000.000</span>
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Pembeli Datang Terlayani</label>
+                                <input type="number" id="pembeli_datang_terlayani_offline_B" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Pembeli Tambahan</label>
+                                <input type="number" id="pembeli_tambahan_offline_B" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Pembeli Tambahan Terlayani</label>
+                                <input type="number" id="pembeli_tambahan_terlayani_offline_B" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                        </div>
+                        <div id="offlineBMessage" class="mt-4 p-4 bg-csv-cold-accent rounded-xl text-center text-csv-dark font-semibold hidden">
+                            🔒 Penjualan Offline Produk B tersedia Medium K5-8
+                        </div>
+                    </div>
+                </div>
+
+                <div id="mainOnlineSection" class="bg-csv-light-fill rounded-3xl shadow-lg p-8 border-4 border-csv-secondary">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-csv-dark">🌐 Penjualan Online</h2>
+                        <span id="onlineStatus" class="px-4 py-2 rounded-full font-bold text-sm"></span>
+                    </div>
+                    
+                    <div id="onlineASection" class="mb-8">
+                        <h3 class="text-xl font-bold text-csv-dark mb-4 bg-blue-100 p-3 rounded-xl">🔵 Produk A</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Harga Online (Rp)</label>
+                                <input type="text" id="harga_online_A"  value="0" class="format-rupiah w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                                <span class="price-range-helper">Range : Rp 3.000.000 - Rp 5.000.000</span>
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Pembeli Datang Terlayani</label>
+                                <input type="number" id="pembeli_datang_terlayani_online_A" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Pembeli Tambahan</label>
+                                <input type="number" id="pembeli_tambahan_online_A" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Pembeli Tambahan Terlayani</label>
+                                <input type="number" id="pembeli_tambahan_terlayani_online_A" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="onlineBSection">
+                        <h3 class="text-xl font-bold text-csv-dark mb-4 bg-green-100 p-3 rounded-xl">🟢 Produk B <span class="text-sm font-normal text-csv-secondary-dark">(Medium: K5-8)</span></h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Harga Online (Rp)</label>
+                                <input type="text" id="harga_online_B"  value="0" class="format-rupiah w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                                <span class="price-range-helper">Range : Rp 3.000.000 - Rp 5.000.000</span>
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Pembeli Datang Terlayani</label>
+                                <input type="number" id="pembeli_datang_terlayani_online_B" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Pembeli Tambahan</label>
+                                <input type="number" id="pembeli_tambahan_online_B" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-csv-secondary-dark mb-3">Pembeli Tambahan Terlayani</label>
+                                <input type="number" id="pembeli_tambahan_terlayani_online_B" min="0" value="0" class="w-full p-4 border-4 border-csv-highlight rounded-2xl bg-csv-main font-semibold">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="onlineMessage" class="mt-4 p-4 bg-csv-cold-accent rounded-xl text-center text-csv-dark font-semibold hidden">
+                        🔒 Penjualan Online Produk A tersedia Medium K1-8, Easy K5-8.
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center bg-csv-accent p-6 rounded-3xl shadow-lg border-4 border-csv-highlight">
+                    <button type="button" onclick="saveFullDecision()" id="saveDecisionBtn" class="bg-green-500 text-white font-bold py-4 px-8 rounded-2xl hover:bg-green-700 transition duration-300 shadow-lg disabled:opacity-50">
+                        Simpan Keputusan Kuartil <span id="saveQNum">1</span>
+                    </button>
+                    </div>
+
+            </div>
+
+            <div id="summaryTab" class="hidden">
+                <div class="bg-csv-light-fill rounded-3xl shadow-lg p-8 border-4 border-csv-highlight">
+                    <h2 class="text-3xl font-bold text-csv-dark mb-6">📊 Ringkasan Keuangan Kelompok <span id="summaryTeam"></span></h2>
+                    
+                    <div class="mb-8 p-4 bg-csv-main rounded-xl shadow-inner border border-csv-highlight">
+                        <canvas id="kasChart" width="400" height="150"></canvas>
+                    </div>
+
+                    <div id="summaryTables" class="space-y-4"></div>
+                </div>
+            </div>
+
+            <div id="reportTab" class="hidden">
+                <div class="bg-csv-light-fill rounded-3xl shadow-lg p-8 border-4 border-csv-highlight">
+                    <h2 class="text-3xl font-bold text-csv-dark mb-6">📄 Laporan Kelompok <span id="reportTeam"></span></h2>
+                    
+                    <div class="mb-8 border-b-2 pb-6 border-csv-cold-accent">
+                        <h3 class="text-xl font-bold text-csv-dark mb-4">Laporan Akhir (PDF)</h3>
+                        <button onclick="downloadPDF()" id="pdfDownloadButton" class="bg-red-500 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl transition duration-300 shadow-lg flex items-center mb-4 disabled:opacity-50" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg>
+                            Download PDF Laporan (Kuartil 1 - <span id="maxQDownload">8</span>)
+                        </button>
+                        <div id="pdfViewerContainer" class="w-full h-[800px] border-4 border-csv-cold-accent rounded-xl shadow-inner bg-gray-200">
+                            <iframe id="pdfViewerIframe" class="w-full h-full" src="about:blank" frameborder="0" allowfullscreen>
+                                <p class="p-4 text-center text-csv-secondary-dark">Browser Anda tidak mendukung iFrames/PDF Viewer. Gunakan tombol Download di atas.</p>
+                            </iframe>
+                        </div>
+                        <p class="text-sm text-csv-secondary-dark mt-2">Catatan: Laporan yang ditampilkan adalah untuk kuartil terakhir yang sudah diselesaikan. Tekan tombol Download untuk versi resmi.</p>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-csv-dark mb-4 border-b-2 pb-2 border-csv-cold-accent">Riwayat Keputusan Kuartil</h3>
+                    <div id="reportContentHistory" class="space-y-4">
+                        <p class="text-csv-secondary-dark text-center py-8">Riwayat keputusan akan ditampilkan di sini.</p>
+                    </div>
+                </div>
+            </div>
+            <div id="leaderboardTab" class="hidden">
+                <div class="bg-csv-light-fill rounded-3xl shadow-lg p-8 border-4 border-csv-accent">
+                    <h2 class="text-3xl font-bold text-csv-dark mb-6">🏆 Leaderboard Kelompok <span id="leaderboardTeam"></span></h2>
+                    <div id="leaderboardContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="loadingOverlay" class="hidden">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p id="loadingMessage" class="text-xl font-bold text-csv-dark">Memproses data...</p>
+            <div class="loading-dots">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_URL = 'https://script.google.com/macros/s/AKfycbyEu0VFm1Yqsli7_gSCNDpLPDTAlpUP2OuAmf2tQm2yuF-hGQE-C6tOcO0LF3n9MxdH/exec';
+
+        function getOpponent(kelompok) {
+            const pairs = { 'A': 'B', 'B': 'A', 'C': 'D', 'D': 'C', 'E': 'F', 'F': 'E', 'G': 'H', 'H': 'G', 'I': 'J', 'J': 'I' };
+            return pairs[kelompok] || '';
+        }
+
+        const STRATEGIES = [
+            'Iklan Radio',
+            'Iklan Televisi',
+            'Brosur, Billboard & OOH',
+            'Upgrade Fasilitas Toko',
+            'Pameran Offline',
+            'Buzzer & Affiliate Toko',
+            'Iklan Sosial Media',
+            'SMS & Broadcast WA',
+            'Diskon Online Shop',
+            'Optimasi Search Engine'
+        ];
+
+        let currentUser = null;
+        let currentQuarter = 1;
+        let strategyUsage = {};
+        let decisions = [];
+        let summaryDataCache = null;
+        let kasChart = null;
+        let inventoryDataCache = null;
+
+        // Initialize
+        window.onload = function() {
+            checkAuth();
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            
+            document.getElementById('authTanggal').value = `${year}-${month}-${day}`;
+            document.getElementById('authWaktu').value = `${hours}:${minutes}`;
+        };
+
+        // --- Utility Functions ---
+        
+        function showLoading(message = 'Memproses data...') {
+            document.getElementById('loadingMessage').textContent = message;
+            document.getElementById('loadingOverlay').classList.add('show');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('show');
+        }
+
+        function updateKelompokOptions() {
+            const level = document.getElementById('authLevel').value;
+            const kelompokSelect = document.getElementById('authKelompok');
+            kelompokSelect.innerHTML = '<option value="">Pilih Kelompok</option>';
+
+            if (level) {
+                const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+                groups.forEach(g => {
+                    const option = document.createElement('option');
+                    option.value = g;
+                    option.textContent = `Kelompok ${g}`;
+                    kelompokSelect.appendChild(option);
+                });
+            } else {
+                kelompokSelect.innerHTML = '<option value="">Pilih Level Terlebih Dahulu</option>';
+            }
+        }
+        
+        function checkAuth() {
+            const savedUser = localStorage.getItem('currentUser');
+            const savedDecisions = localStorage.getItem('decisions');
+            const savedQ = localStorage.getItem('currentQuarter');
+            
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                currentQuarter = parseInt(savedQ) || 1;
+                decisions = savedDecisions ? JSON.parse(savedDecisions) : [];
+                document.getElementById('authModal').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('userInfo').textContent = `Kelompok ${currentUser.kelompok} (${currentUser.level})`;
+                document.getElementById('opponentInfo').textContent = getOpponent(currentUser.kelompok);
+                document.getElementById('reportTeam').textContent = currentUser.kelompok;
+                document.getElementById('leaderboardTeam').textContent = currentUser.kelompok;
+                document.getElementById('summaryTeam').textContent = currentUser.kelompok;
+                updateQuarter();
+                loadStrategyUsage();
+                showTab('input'); // Default to input tab on load
+                // Panggil kedua fungsi (Summary data untuk Cash, Inventory data untuk Inventaris)
+                loadSummaryDataAndDisplay(true); // Memuat Summary (termasuk cash)
+                fetchInventoryData().then(updateInventoryInfo); // Memuat Inventory lalu update Navbar
+            } else {
+                document.getElementById('authModal').classList.remove('hidden');
+                document.getElementById('mainApp').classList.add('hidden');
+            }
+        }
+
+        function handleRegister() {
+            const level = document.getElementById('authLevel').value;
+            const kelompok = document.getElementById('authKelompok').value;
+            
+            if (!level || !kelompok) {
+                alert('⚠️ Mohon lengkapi semua bidang!');
+                return;
+            }
+
+            currentUser = { level, kelompok, player: kelompok.toUpperCase() === 'A' || kelompok.toUpperCase() === 'C' || kelompok.toUpperCase() === 'E' || kelompok.toUpperCase() === 'G' || kelompok.toUpperCase() === 'I' ? 'P1' : 'P2' };
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            // Check if there are existing decisions and load them if needed. 
+            // For simplicity in this fix, we will re-run checkAuth to initialize.
+            checkAuth();
+            alert(`Selamat datang, Kelompok ${kelompok} (${level})!`);
+        }
+
+        function handleLogout() {
+            if (confirm('Anda yakin ingin keluar? Pastikan keputusan terakhir sudah tersimpan.')) {
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('currentQuarter');
+                localStorage.removeItem('decisions');
+                localStorage.removeItem('strategyUsage');
+                currentUser = null;
+                currentQuarter = 1;
+                decisions = [];
+                strategyUsage = {};
+                window.location.href = "index.html";
+            }
+        }
+
+        function showTab(tabId) {
+            const tabs = ['input', 'summary', 'report', 'leaderboard'];
+            tabs.forEach(id => {
+                document.getElementById(`${id}Tab`).classList.add('hidden');
+                document.getElementById(`tab${id.charAt(0).toUpperCase() + id.slice(1)}`).classList.remove('bg-gradient-to-b', 'from-csv-cold-accent', 'to-csv-main', 'text-csv-dark', 'shadow-inner');
+                document.getElementById(`tab${id.charAt(0).toUpperCase() + id.slice(1)}`).classList.add('bg-gray-50', 'text-gray-500', 'hover:bg-gray-100');
+            });
+
+            document.getElementById(`${tabId}Tab`).classList.remove('hidden');
+            document.getElementById(`tab${tabId.charAt(0).toUpperCase() + tabId.slice(1)}`).classList.add('bg-gradient-to-b', 'from-csv-cold-accent', 'to-csv-main', 'text-csv-dark', 'shadow-inner');
+            document.getElementById(`tab${tabId.charAt(0).toUpperCase() + tabId.slice(1)}`).classList.remove('bg-gray-50', 'text-gray-500', 'hover:bg-gray-100');
+
+            if (tabId === 'summary') {
+                loadSummary();
+            } else if (tabId === 'report') {
+                loadReport();
+            } else if (tabId === 'leaderboard') {
+                loadLeaderboard();
+            }
+        }
+
+        function updateQuarter() {
+            const maxQ = 8;
+            const currentQuarterEl = document.getElementById('currentQuarter');
+            const saveQNumEl = document.getElementById('saveQNum');
+            const prevBtn = document.getElementById('prevQBtn');
+            const saveBtn = document.getElementById('saveDecisionBtn');
+
+            if (currentQuarterEl) currentQuarterEl.textContent = currentQuarter;
+            if (saveQNumEl) saveQNumEl.textContent = currentQuarter;
+
+            if (prevBtn) {
+                if (currentQuarter > 1) {
+                    prevBtn.disabled = false;
+                } else {
+                    prevBtn.disabled = true;
+                }
+            }
+            
+            // Save button logic (since Next button is removed, Save is the only way to advance)
+            if (saveBtn) {
+                if (currentQuarter <= maxQ) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = `Simpan Keputusan Kuartil ${currentQuarter}`;
+                } else {
+                    saveBtn.disabled = true;
+                    saveBtn.textContent = 'Permainan Selesai';
+                }
+            }
+
+            // Load saved data for the current quarter
+            loadInputData(currentQuarter);
+            updateOnlineAvailability();
+            
+            // Update PDF Max Quarter display (for completed quarters)
+            document.getElementById('maxQDownload').textContent = currentQuarter > 1 ? currentQuarter - 1 : 1; 
+
+            // Update messages for Prod B (Medium)
+            const isMedium = currentUser.level === 'medium';
+            const invBSection = document.getElementById('inventoryBSection');
+            const invBMessage = document.getElementById('inventoryBMessage');
+            const offlineBSection = document.getElementById('offlineBSection');
+            const offlineBMessage = document.getElementById('offlineBMessage');
+
+            // Pengadaan B (Medium K5-7)
+            if (invBSection) {
+                const showProductB_Inv = isMedium && currentQuarter >= 5 && currentQuarter <= 7;
+                if (showProductB_Inv) {
+                    invBSection.classList.remove('hidden', 'opacity-60');
+                    if (invBMessage) invBMessage.classList.add('hidden');
+                } else {
+                    if (isMedium && currentQuarter < 5) {
+                         invBSection.classList.add('opacity-60');
+                         if (invBMessage) invBMessage.classList.remove('hidden');
+                    } else if (isMedium && currentQuarter > 7) {
+                        invBSection.classList.add('opacity-60');
+                        if (invBMessage) {
+                            invBMessage.classList.remove('hidden');
+                            invBMessage.textContent = '🔒 Pengadaan Produk B telah berakhir.';
+                        }
+                    } else { // Easy level or other quarters where it is not available
+                        invBSection.classList.add('hidden');
+                    }
+                }
+            }
+            
+            // Penjualan Offline B (Medium K5-8)
+            if (offlineBSection) {
+                const showProductB_Offline = isMedium && currentQuarter >= 5 && currentQuarter <= 8;
+                if (showProductB_Offline) {
+                    offlineBSection.classList.remove('hidden', 'opacity-60');
+                    if (offlineBMessage) offlineBMessage.classList.add('hidden');
+                } else {
+                    if (isMedium && currentQuarter < 5) {
+                        offlineBSection.classList.add('opacity-60');
+                        if (offlineBMessage) offlineBMessage.classList.remove('hidden');
+                    } else if (isMedium && currentQuarter > 8) {
+                        offlineBSection.classList.add('opacity-60');
+                        if (offlineBMessage) {
+                            offlineBMessage.classList.remove('hidden');
+                            offlineBMessage.textContent = '🔒 Penjualan Offline Produk B telah berakhir.';
+                        }
+                    } else { // Easy level or other quarters where it is not available
+                        offlineBSection.classList.add('hidden');
+                    }
+                }
+            }
+        }
+
+        function updateOnlineAvailability() {
+            const kuartil = currentQuarter;
+            const isMedium = currentUser.level === 'medium';
+            const isEasy = currentUser.level === 'easy';
+            const mainOnlineSection = document.getElementById('mainOnlineSection');
+            const onlineASection = document.getElementById('onlineASection');
+            const onlineBSection = document.getElementById('onlineBSection');
+            const onlineStatus = document.getElementById('onlineStatus');
+            const onlineMessage = document.getElementById('onlineMessage');
+
+            const onlineA_start_kuartil = isEasy ? 5 : 1;
+            const showOnlineA = kuartil >= onlineA_start_kuartil;
+            const showProductB_Online = isMedium && kuartil >= 5 && kuartil <= 8;
+
+            // Main Online Section visibility
+            if (showOnlineA || showProductB_Online) {
+                mainOnlineSection.classList.remove('opacity-60', 'hidden');
+                onlineStatus.textContent = '✅ Aktif';
+                onlineStatus.className = 'px-4 py-2 rounded-full font-bold text-sm bg-csv-secondary text-csv-dark';
+                onlineMessage.classList.add('hidden');
+            } else {
+                mainOnlineSection.classList.add('opacity-60');
+                onlineStatus.textContent = '🔒 Nonaktif';
+                onlineStatus.className = 'px-4 py-2 rounded-full font-bold text-sm bg-csv-cold-accent text-csv-secondary-dark';
+                onlineMessage.classList.remove('hidden');
+            }
+
+            // Online A visibility
+            if (onlineASection) {
+                if (showOnlineA) {
+                    onlineASection.classList.remove('hidden');
+                } else {
+                    onlineASection.classList.add('hidden');
+                }
+            }
+
+            // Online B visibility
+            if (onlineBSection) {
+                if (showProductB_Online) {
+                    onlineBSection.classList.remove('hidden');
+                } else {
+                    onlineBSection.classList.add('hidden');
+                }
+            }
+        }
+
+        function loadInputData(kuartil) {
+            const savedDecision = decisions.find(d => d.kuartil === kuartil);
+            
+            // Default values
+            const defaultDecision = {
+                marketing_1: '', marketing_2: '', marketing_3: '',
+                supplier_a_A: 0, supplier_b_A: 0, supplier_c_A: 0, supplier_d_A: 0,
+                supplier_a_B: 0, supplier_b_B: 0, supplier_c_B: 0, supplier_d_B: 0,
+                harga_offline_A: 0, pembeli_datang_terlayani_offline_A: 0, pembeli_tambahan_offline_A: 0, pembeli_tambahan_terlayani_offline_A: 0,
+                harga_offline_B: 0, pembeli_datang_terlayani_offline_B: 0, pembeli_tambahan_offline_B: 0, pembeli_tambahan_terlayani_offline_B: 0,
+                harga_online_A: 0, pembeli_datang_terlayani_online_A: 0, pembeli_tambahan_online_A: 0, pembeli_tambahan_terlayani_online_A: 0,
+                harga_online_B: 0, pembeli_datang_terlayani_online_B: 0, pembeli_tambahan_online_B: 0, pembeli_tambahan_terlayani_online_B: 0,
+            };
+            
+            const decisionData = savedDecision || defaultDecision;
+
+            // Load to Inputs
+            document.getElementById('marketing1').value = decisionData.marketing_1;
+            document.getElementById('marketing2').value = decisionData.marketing_2;
+            document.getElementById('marketing3').value = decisionData.marketing_3;
+
+            document.getElementById('supplierA_A').value = decisionData.supplier_a_A;
+            document.getElementById('supplierB_A').value = decisionData.supplier_b_A;
+            document.getElementById('supplierC_A').value = decisionData.supplier_c_A;
+            document.getElementById('supplierD_A').value = decisionData.supplier_d_A;
+
+            document.getElementById('supplierA_B').value = decisionData.supplier_a_B;
+            document.getElementById('supplierB_B').value = decisionData.supplier_b_B;
+            document.getElementById('supplierC_B').value = decisionData.supplier_c_B;
+            document.getElementById('supplierD_B').value = decisionData.supplier_d_B;
+
+            document.getElementById('harga_offline_A').value = String(decisionData.harga_offline_A || 0).replace(/\./g, "");
+            document.getElementById('pembeli_datang_terlayani_offline_A').value = decisionData.pembeli_datang_terlayani_offline_A;
+            document.getElementById('pembeli_tambahan_offline_A').value = decisionData.pembeli_tambahan_offline_A;
+            document.getElementById('pembeli_tambahan_terlayani_offline_A').value = decisionData.pembeli_tambahan_terlayani_offline_A;
+            
+            document.getElementById('harga_offline_B').value = String(decisionData.harga_offline_B || 0).replace(/\./g, "");
+            document.getElementById('pembeli_datang_terlayani_offline_B').value = decisionData.pembeli_datang_terlayani_offline_B;
+            document.getElementById('pembeli_tambahan_offline_B').value = decisionData.pembeli_tambahan_offline_B;
+            document.getElementById('pembeli_tambahan_terlayani_offline_B').value = decisionData.pembeli_tambahan_terlayani_offline_B;
+            
+            document.getElementById('harga_online_A').value = String(decisionData.harga_online_A || 0).replace(/\./g, "");
+            document.getElementById('pembeli_datang_terlayani_online_A').value = decisionData.pembeli_datang_terlayani_online_A;
+            document.getElementById('pembeli_tambahan_online_A').value = decisionData.pembeli_tambahan_online_A;
+            document.getElementById('pembeli_tambahan_terlayani_online_A').value = decisionData.pembeli_tambahan_terlayani_online_A;
+
+            document.getElementById('harga_online_B').value = String(decisionData.harga_online_B || 0).replace(/\./g, "");
+            document.getElementById('pembeli_datang_terlayani_online_B').value = decisionData.pembeli_datang_terlayani_online_B;
+            document.getElementById('pembeli_tambahan_online_B').value = decisionData.pembeli_tambahan_online_B;
+            document.getElementById('pembeli_tambahan_terlayani_online_B').value = decisionData.pembeli_tambahan_terlayani_online_B;
+
+            updateStrategyCounter(); // Re-validate usage on load
+        }
+
+        async function saveMarketingOnly() {
+            console.log('=== SAVE MARKETING ONLY ===');
+            console.log('Current User:', currentUser);
+            console.log('Current Quarter:', currentQuarter);
+            
+            if (!currentUser || !currentUser.kelompok || !currentUser.level) {
+                alert('❌ Sesi tidak valid. Silakan login kembali.');
+                return;
+            }
+            
+            showLoading('Menyimpan strategi pemasaran...');
+
+            const marketing1 = document.getElementById('marketing1').value.trim();
+            const marketing2 = document.getElementById('marketing2').value.trim();
+            const marketing3 = document.getElementById('marketing3').value.trim();
+            const selectedStrategies = [marketing1, marketing2, marketing3].filter(s => s);
+
+            console.log('Selected strategies:', selectedStrategies);
+
+            // Validasi: tidak boleh ada strategi yang sama
+            if (new Set(selectedStrategies).size !== selectedStrategies.length) {
+                hideLoading();
+                alert('❌ Gagal menyimpan: Strategi Pemasaran 1, 2, dan 3 harus berbeda-beda. Harap periksa kembali.');
+                return;
+            }
+
+            // Validasi penggunaan maksimal 3 kali
+            const tempUsage = { ...strategyUsage };
+            const previousDecision = decisions.find(d => d.kuartil === currentQuarter);
+            
+            if (previousDecision) {
+                [previousDecision.marketing_1, previousDecision.marketing_2, previousDecision.marketing_3]
+                    .filter(s => s)
+                    .forEach(s => {
+                        tempUsage[s] = (tempUsage[s] || 0) - 1;
+                    });
+            }
+
+            for (let strategy of selectedStrategies) {
+                tempUsage[strategy] = (tempUsage[strategy] || 0) + 1;
+                if (tempUsage[strategy] > 3) {
+                    hideLoading();
+                    alert(`❌ Strategi "${strategy}" sudah digunakan 3 kali! Pilih strategi lain.`);
+                    return;
+                }
+            }
+
+            const payload = {
+                action: 'save_marketing',
+                kelompok: currentUser.kelompok.toUpperCase(),
+                level: currentUser.level.toLowerCase(),
+                decision: {
+                    kuartil: currentQuarter,
+                    marketing_1: marketing1,
+                    marketing_2: marketing2,
+                    marketing_3: marketing3,
+                }
+            };
+
+            console.log('Sending payload:', payload);
+
+            try {
+                const data = await sendToGoogleSheets(payload);
+                
+                hideLoading();
+                
+                if (data.success) {
+                    // Save locally
+                    let currentDecision = decisions.find(d => d.kuartil === currentQuarter);
+                    if (!currentDecision) {
+                        currentDecision = { kuartil: currentQuarter };
+                        decisions.push(currentDecision);
+                    }
+                    currentDecision.marketing_1 = marketing1;
+                    currentDecision.marketing_2 = marketing2;
+                    currentDecision.marketing_3 = marketing3;
+                    localStorage.setItem('decisions', JSON.stringify(decisions));
+
+                    // Update Strategy Usage
+                    loadStrategyUsage(); 
+                    updateStrategyCounterDisplay();
+                    
+                    alert(`✅ Strategi Pemasaran Kuartil ${currentQuarter} berhasil disimpan!`);
+                    
+                    console.log('Marketing saved successfully:', data);
+                } else {
+                    alert('❌ Gagal menyimpan strategi: ' + (data.error || 'Terjadi kesalahan pada server.'));
+                }
+            } catch (error) {
+                // Error sudah ditangani di sendToGoogleSheets
+                console.error('Save marketing error:', error);
+            }
+        }
+        async function savePricesOnly(type) {
+                    // type = 'offline' atau 'online'
+                    console.log(`=== SAVE PRICES ONLY (${type}) ===`);
+                    
+                    if (!currentUser || !currentUser.kelompok) {
+                        alert('❌ Sesi tidak valid. Silakan login kembali.');
+                        return;
+                    }
+                    
+                    showLoading(`Menyimpan harga ${type} sementara...`);
+
+                    const kuartil = currentQuarter;
+                    
+                    // Siapkan objek decision parsial
+                    let decision = { kuartil: kuartil };
+                    
+                    // Ambil data harga berdasarkan tipe
+                    if (type === 'offline') {
+                        decision.harga_offline_A = parseInt(document.getElementById('harga_offline_A').value.replace(/\./g, '')) || 0;
+                        decision.harga_offline_B = parseInt(document.getElementById('harga_offline_B').value.replace(/\./g, '')) || 0;
+                    } else if (type === 'online') {
+                        decision.harga_online_A = parseInt(document.getElementById('harga_online_A').value.replace(/\./g, '')) || 0;
+                        decision.harga_online_B = parseInt(document.getElementById('harga_online_B').value.replace(/\./g, '')) || 0;
+                    }
+
+                    const payload = {
+                        action: 'save_price', // Pastikan backend Apps Script menangani action ini
+                        kelompok: currentUser.kelompok.toUpperCase(),
+                        level: currentUser.level.toLowerCase(),
+                        type: type, // kirim parameter tipe untuk memudahkan backend
+                        decision: decision
+                    };
+
+                    try {
+                        // Simpan ke Local Storage dulu agar aman
+                        let currentDecision = decisions.find(d => d.kuartil === currentQuarter);
+                        if (!currentDecision) {
+                            currentDecision = { kuartil: currentQuarter };
+                            decisions.push(currentDecision);
+                        }
+                        
+                        if (type === 'offline') {
+                            currentDecision.harga_offline_A = decision.harga_offline_A;
+                            currentDecision.harga_offline_B = decision.harga_offline_B;
+                        } else {
+                            currentDecision.harga_online_A = decision.harga_online_A;
+                            currentDecision.harga_online_B = decision.harga_online_B;
+                        }
+                        localStorage.setItem('decisions', JSON.stringify(decisions));
+
+                        // Kirim ke Server
+                        const data = await sendToGoogleSheets(payload);
+                        hideLoading();
+                        
+                        if (data.success) {
+                            alert(`✅ Harga ${type} berhasil disimpan sementara!`);
+                        } else {
+                            // Jika backend belum support action 'save_price', tetap beri notif sukses karena sudah tersimpan di LocalStorage
+                            console.warn("Backend response:", data);
+                            alert(`✅ Harga tersimpan di aplikasi (Local). Pastikan Simpan Keputusan Akhir nanti.`);
+                        }
+                    } catch (error) {
+                        hideLoading();
+                        console.error('Save price error:', error);
+                        alert('⚠️ Terjadi kesalahan koneksi, namun data tersimpan di browser Anda.');
+                    }
+                }
+        async function fetchInventoryData() {
+            if (!currentUser || !currentUser.kelompok || !currentUser.level) return;
+
+            try {
+                const url = `${API_URL}?action=get_inventory&level=${currentUser.level}&kelompok=${currentUser.kelompok}`;
+                const response = await fetch(url);
+                const text = await response.text();
+                let data = JSON.parse(text);
+
+                if (data.success && data.inventory && Array.isArray(data.inventory)) {
+                    inventoryDataCache = data.inventory;
+                    return true;
+                } else {
+                    console.error('Failed to load inventory data:', data.error || data.message);
+                    inventoryDataCache = [];
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error fetching inventory:', error);
+                inventoryDataCache = [];
+                return false;
+            }
+        }
+        function updateInventoryInfo() {
+            const container = document.getElementById('inventoryInfo');
+            if (!container) return;
+            
+            // Kuartil yang sudah selesai adalah kuartil sebelumnya
+            const lastCompletedQ = currentQuarter - 1; 
+
+            if (lastCompletedQ < 1) {
+                container.innerHTML = '<p class="font-bold text-csv-dark text-xl">Rp 50.000.000</p><p class="text-csv-secondary-dark text-sm">Kas Awal</p>';
+                container.classList.remove('hidden');
+                return;
+            }
+
+            let inventoryInfo = { inventory_A: 0, inventory_B: 0, inventory_C: 0, inventory_D: 0 };
+            let cash = 0;
+            
+            // 1. Ambil data Kas Tersedia (dari Summary Cache)
+            if (summaryDataCache && Array.isArray(summaryDataCache)) {
+                 const lastSummary = summaryDataCache.find(item => {
+                    const qNum = parseInt(item.kuartil.replace('Kuartil ', ''));
+                    return qNum === lastCompletedQ;
+                });
+                cash = lastSummary ? lastSummary.cash : 0;
+            }
+
+            // 2. Ambil data Inventaris Awal (dari Inventory Cache)
+            // Inventory yang ditampilkan haruslah INVENTORI AWAL KUARTIL SAAT INI (currentQuarter)
+            if (inventoryDataCache && Array.isArray(inventoryDataCache)) {
+                // Mencari data inventaris untuk kuartil yang akan datang (currentQuarter)
+                const nextInventory = inventoryDataCache.find(item => item.kuartil === currentQuarter);
+                
+                if (nextInventory) {
+                    inventoryInfo = {
+                        inventory_A: nextInventory.inventory_A, // Inventori Awal
+                        inventory_B: nextInventory.inventory_B, // Transit 1
+                        inventory_C: nextInventory.inventory_C, // Transit 2
+                        inventory_D: nextInventory.inventory_D  // Transit 3
+                    };
+                }
+            }
+
+            container.innerHTML = `
+                <p class="font-bold text-csv-dark text-xl">${formatCurrency(cash)}</p>
+                <p class="text-csv-secondary-dark text-sm">Kas Tersedia (Akhir Q${lastCompletedQ})</p>
+                <p class="text-csv-dark text-xs mt-1">Awal Q${currentQuarter} Inventaris:</p>
+                <p class="text-csv-dark text-xs">
+                    A: ${formatNumber(inventoryInfo.inventory_A)} | 
+                    B: ${formatNumber(inventoryInfo.inventory_B)} | 
+                    T2: ${formatNumber(inventoryInfo.inventory_C)} |
+                    T3: ${formatNumber(inventoryInfo.inventory_D)} 
+                </p>
+            `;
+            container.classList.remove('hidden');
+        }
+        async function sendToGoogleSheets(payload) {
+            console.log('=== SENDING TO GOOGLE SHEETS ===');
+            console.log('Payload:', JSON.stringify(payload, null, 2));
+            console.log('API URL:', API_URL);
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
+                    body: JSON.stringify(payload),
+                    mode: 'cors' // Explicitly set CORS mode
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const text = await response.text();
+                console.log('Response text:', text);
+                
+                let json = null;
+                try {
+                    json = JSON.parse(text);
+                } catch (err) {
+                    console.error('Failed to parse JSON:', err);
+                    throw new Error('Server returned non-JSON response: ' + text.substring(0, 200));
+                }
+                
+                console.log('Parsed response:', json);
+                
+                if (!json || !json.success) {
+                    throw new Error(json && json.error ? json.error : 'Unknown server error');
+                }
+                
+                return json;
+            } catch (error) {
+                hideLoading();
+                console.error('❌ Error sending to Database:', error);
+                console.error('Error details:', {
+                    message: error.message,
+                    stack: error.stack
+                });
+                alert('⚠️ Gagal mengirim ke Database:\n\n' + error.message + '\n\nSilakan coba lagi atau hubungi administrator.');
+                throw error;
+            }
+        }
+        function updateStrategyCounter() {
+            // Preview only, actual increment happens on save
+        }
+
+        function updateStrategyCounterDisplay() {
+            const container = document.getElementById('strategyCounter');
+            let html = '';
+            STRATEGIES.forEach(strategy => {
+                const count = strategyUsage[strategy] || 0;
+                const isUsed = count >= 3 ? 'strategy-used' : '';
+                html += `
+                    <div class="p-2 border border-csv-highlight rounded-xl text-center bg-csv-main ${isUsed}">
+                        <div class="font-bold">${strategy}</div>
+                        <div class="text-xs text-csv-secondary-dark">${count} / 3</div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function loadStrategyUsage() {
+            const savedUsage = localStorage.getItem('strategyUsage');
+            if (savedUsage) {
+                strategyUsage = JSON.parse(savedUsage);
+            } else {
+                strategyUsage = {};
+            }
+            // Ensure strategyUsage reflects decisions, in case of old data structure
+            strategyUsage = {};
+            decisions.forEach(d => {
+                [d.marketing_1, d.marketing_2, d.marketing_3].filter(s => s).forEach(s => {
+                    strategyUsage[s] = (strategyUsage[s] || 0) + 1;
+                });
+            });
+            localStorage.setItem('strategyUsage', JSON.stringify(strategyUsage));
+            updateStrategyCounterDisplay();
+        }
+
+        async function loadSummaryDataAndDisplay(onlyCache = false) { // <<< Ubah signature
+            document.getElementById('summaryTeam').textContent = currentUser.kelompok;
+            const container = document.getElementById('summaryTables');
+            if (!onlyCache) container.innerHTML = '<p class="text-csv-secondary-dark text-center py-8">Memuat data ringkasan...</p>';
+            
+            try {
+                // Kode fetch API yang telah disempurnakan
+                const url = `${API_URL}?action=get_summary&level=${currentUser.level}&kelompok=${currentUser.kelompok}`;
+                const response = await fetch(url);
+                const text = await response.text();
+                let data = JSON.parse(text);
+
+                console.log('Summary API Response:', data); // Debug log
+
+                if (data.success && (data.summary_data || data.processed_data)) {
+                    // Support both key names for backward compatibility
+                    const summaryData = data.summary_data || data.processed_data;
+                    
+                    // Pemrosesan data tim dan set summaryDataCache
+                    const teamKey = currentUser.player === 'P1' ? 'team1' : 'team2';
+                    summaryDataCache = summaryData[teamKey] || [];
+                    
+                    console.log('Team Data:', summaryDataCache); // Debug log
+                    
+                    if (!onlyCache) { // Hanya tampilkan tabel jika bukan panggilan cache
+                        if (Array.isArray(summaryDataCache) && summaryDataCache.length > 0) {
+                            // Cek apakah game sudah dimulai (Kuartil 1 sudah berjalan?)
+                            const kuartil1 = summaryDataCache.find(item => item.kuartil === 'Kuartil 1');
+                            const gameStarted = kuartil1 && (kuartil1.sudahBerjalan === 'Ya' || kuartil1.sudahBerjalan === 'ya' || kuartil1.sudahBerjalan === 'YES');
+                            
+                            console.log('Game Started:', gameStarted); // Debug log
+                            
+                            if (!gameStarted) {
+                                container.innerHTML = `
+                                    <div class="text-center py-12">
+                                        <div class="text-6xl mb-4">🎮</div>
+                                        <h3 class="text-2xl font-bold text-csv-dark mb-2">Game Belum Dimulai</h3>
+                                        <p class="text-csv-secondary-dark">Kuartil 1 belum berjalan. Silakan mulai permainan terlebih dahulu.</p>
+                                    </div>
+                                `;
+                                renderCashflowChart([]);
+                            } else {
+                                displaySummaryTables(summaryDataCache);
+                                renderCashflowChart(summaryDataCache);
+                            }
+                        } else {
+                            container.innerHTML = '<p class="text-csv-secondary-dark text-center py-8">Data ringkasan untuk kelompok Anda belum tersedia.</p>';
+                            renderCashflowChart([]);
+                        }
+                    }
+                    
+                    // Panggil updateInventoryInfo setelah cache Kas diisi
+                    updateInventoryInfo(); // Ini akan membaca Kas dari summaryDataCache
+                } else {
+                    if (!onlyCache) {
+                        container.innerHTML = `<p class="text-red-500 text-center py-8">❌ Gagal memuat data ringkasan. ${data.error || data.message || '(Backend API Error)'}</p>`;
+                        renderCashflowChart([]);
+                    }
+                }
+            } catch (error) {
+                if (!onlyCache) {
+                    container.innerHTML = `<p class="text-red-500 text-center py-8">Error jaringan/pemrosesan ringkasan: ${error.message}</p>`;
+                    renderCashflowChart([]);
+                }
+                console.error('Error fetching summary:', error);
+            }
+        }
+        
+        async function loadSummary() {
+            await loadSummaryDataAndDisplay();
+        }
+
+        function formatCurrency(num) {
+            return 'Rp ' + (parseFloat(num) || 0).toLocaleString('id-ID');
+        }
+
+        function formatNumber(num, decimals = 0) {
+            return (parseFloat(num) || 0).toFixed(decimals).toLocaleString('id-ID');
+        }
+
+        function displaySummaryTables(summaryData) {
+            const container = document.getElementById('summaryTables');
+            const currentQ = currentQuarter;
+            
+            if (!Array.isArray(summaryData) || summaryData.length === 0) {
+                container.innerHTML = '<p class="text-csv-secondary-dark text-center py-8">Data ringkasan per kuartil tidak tersedia atau kosong.</p>';
+                return;
+            }
+
+            // Filter data berdasarkan kuartil yang sudah berjalan
+            const completedDataRows = summaryData.filter(item => {
+                return item.sudahBerjalan === 'Ya' || item.sudahBerjalan === 'ya' || item.sudahBerjalan === 'YES';
+            });
+
+            if (completedDataRows.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="text-6xl mb-4">⏳</div>
+                        <h3 class="text-2xl font-bold text-csv-dark mb-2">Belum Ada Data</h3>
+                        <p class="text-csv-secondary-dark">Belum ada kuartil yang sudah berjalan.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Tampilkan tabel dengan 5 kolom: Kuartil, Sudah Berjalan, Kas Tersedia, Offline Rating, Online Rating
+            let tableHtml = `
+                <div class="overflow-x-auto shadow-xl rounded-xl">
+                    <table class="min-w-full table-auto border-collapse">
+                        <thead>
+                            <tr class="bg-csv-accent text-csv-dark text-left">
+                                <th class="p-3 border-b-2 border-csv-highlight">Kuartil</th>
+                                <th class="p-3 border-b-2 border-csv-highlight">Status</th>
+                                <th class="p-3 border-b-2 border-csv-highlight">Kas Tersedia</th>
+                                <th class="p-3 border-b-2 border-csv-highlight">Offline Rating</th>
+                                <th class="p-3 border-b-2 border-csv-highlight">Online Rating</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            completedDataRows.forEach((item, index) => {
+                const isLast = index === completedDataRows.length - 1;
+                const statusIcon = item.sudahBerjalan === 'Ya' || item.sudahBerjalan === 'ya' || item.sudahBerjalan === 'YES' ? '✅' : '⏳';
+                const statusText = item.sudahBerjalan === 'Ya' || item.sudahBerjalan === 'ya' || item.sudahBerjalan === 'YES' ? 'Sudah Berjalan' : 'Belum';
+                
+                tableHtml += `
+                    <tr class="bg-csv-main text-csv-dark ${isLast ? 'font-bold' : ''} hover:bg-csv-secondary">
+                        <td class="p-3 border-b border-csv-highlight">${item.kuartil}</td>
+                        <td class="p-3 border-b border-csv-highlight">${statusIcon} ${statusText}</td>
+                        <td class="p-3 border-b border-csv-highlight">${formatCurrency(item.cash)}</td>
+                        <td class="p-3 border-b border-csv-highlight">${item.offlineRating}</td>
+                        <td class="p-3 border-b border-csv-highlight">${item.onlineRating}</td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            container.innerHTML = tableHtml;
+        }
+        function renderCashflowChart(summaryData) {
+            const ctx = document.getElementById('kasChart');
+            if (!ctx) return;
+            const chartContext = ctx.getContext('2d');
+
+            if (!Array.isArray(summaryData) || summaryData.length === 0) {
+                if (kasChart) kasChart.destroy();
+                return;
+            }
+
+            // Filter data untuk kuartil yang sudah Sudah Berjalan(kuartil < currentQuarter)
+            const completedData = summaryData.filter(item => {
+                const kuartilNumber = parseInt(item.kuartil.replace('Kuartil ', ''), 10);
+                return kuartilNumber < currentQuarter;
+            });
+
+            if (completedData.length === 0) {
+                if (kasChart) kasChart.destroy();
+                return;
+            }
+
+            const chartLabels = completedData.map(item => item.kuartil);
+            const cashflowData = completedData.map(item => item.cash);
+
+            if (kasChart) kasChart.destroy();
+
+            kasChart = new Chart(chartContext, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: `Kelompok ${currentUser.kelompok} (Kas Tersedia)`,
+                        data: cashflowData,
+                        borderColor: '#BC9D87',
+                        backgroundColor: '#BC9D8733',
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Perkembangan Kas Tersedia Per Kuartil',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    // Angka sudah numerik murni, tinggal dibagi 1 juta untuk Jt
+                                    return 'Rp ' + (value / 1000000).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' Jt';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function goToPreviousQuarter() {
+            if (currentQuarter > 1) {
+                currentQuarter--;
+                localStorage.setItem('currentQuarter', currentQuarter);
+                updateQuarter();
+                alert(`Kembali ke Kuartil ${currentQuarter}`);
+            }
+        }
+
+        function goToNextQuarter() {
+            const maxQ = 8;
+            if (currentQuarter <= maxQ) {
+                currentQuarter++;
+                localStorage.setItem('currentQuarter', currentQuarter);
+                updateQuarter();
+                fetchInventoryData().then(updateInventoryInfo);
+                if (currentQuarter <= maxQ) {
+                    alert(`Pindah ke Kuartil ${currentQuarter}`);
+                } else {
+                    alert('🎉 Permainan Selesai! Semua Kuartil telah diselesaikan.');
+                }
+            }
+        }
+        
+        async function saveFullDecision() {
+            console.log('=== SAVE FULL DECISION ===');
+            console.log('Current User:', currentUser);
+            console.log('Current Quarter:', currentQuarter);
+            
+            if (!currentUser || !currentUser.kelompok || !currentUser.level) {
+                alert('❌ Sesi tidak valid. Silakan login kembali.');
+                return;
+            }
+            
+            showLoading('Menyimpan keputusan dan memproses ke kuartil berikutnya...');
+
+            const kuartil = currentQuarter;
+            const isMedium = currentUser.level === 'medium';
+            const isEasy = currentUser.level === 'easy';
+            const maxQ = 8;
+
+            if (kuartil > maxQ) {
+                hideLoading();
+                alert('Permainan sudah selesai. Tidak ada keputusan yang perlu disimpan.');
+                return;
+            }
+            
+            // 1. Marketing Data
+            const marketing1 = document.getElementById('marketing1').value.trim();
+            const marketing2 = document.getElementById('marketing2').value.trim();
+            const marketing3 = document.getElementById('marketing3').value.trim();
+            const selectedStrategies = [marketing1, marketing2, marketing3].filter(s => s);
+
+            // Validation: Duplicates
+            if (new Set(selectedStrategies).size !== selectedStrategies.length) {
+                hideLoading();
+                alert('❌ Gagal menyimpan: Strategi Pemasaran 1, 2, dan 3 harus berbeda-beda. Harap periksa kembali.');
+                return;
+            }
+
+            // Validation: Strategy Usage Limit
+            const tempUsage = { ...strategyUsage };
+            const previousDecision = decisions.find(d => d.kuartil === kuartil);
+            
+            if (previousDecision) {
+                [previousDecision.marketing_1, previousDecision.marketing_2, previousDecision.marketing_3]
+                    .filter(s => s)
+                    .forEach(s => {
+                        tempUsage[s] = (tempUsage[s] || 0) - 1;
+                    });
+            }
+
+            for (let strategy of selectedStrategies) {
+                tempUsage[strategy] = (tempUsage[strategy] || 0) + 1;
+                if (tempUsage[strategy] > 3) {
+                    hideLoading();
+                    alert(`❌ Strategi "${strategy}" sudah digunakan 3 kali! Pilih strategi lain.`);
+                    return;
+                }
+            }
+            
+            // 2. Gather all data (sama seperti sebelumnya)
+            const supplier_a_A = parseInt(document.getElementById('supplierA_A').value) || 0;
+            const supplier_b_A = parseInt(document.getElementById('supplierB_A').value) || 0;
+            const supplier_c_A = parseInt(document.getElementById('supplierC_A').value) || 0;
+            const supplier_d_A = parseInt(document.getElementById('supplierD_A').value) || 0;
+
+            const harga_offline_A = parseInt(document.getElementById('harga_offline_A').value.replace(/\./g, '')) || 0; 
+            const pembeli_tambahan_offline_A = parseInt(document.getElementById('pembeli_tambahan_offline_A').value) || 0;
+            const pembeli_tambahan_terlayani_offline_A = parseInt(document.getElementById('pembeli_tambahan_terlayani_offline_A').value) || 0;
+
+            const onlineA_start_kuartil = isEasy ? 5 : 1;
+            let harga_online_A = 0, pembeli_datang_terlayani_online_A = 0, pembeli_tambahan_online_A = 0, pembeli_tambahan_terlayani_online_A = 0;
+            if (kuartil >= onlineA_start_kuartil) {
+                harga_online_A = parseInt(document.getElementById('harga_online_A').value.replace(/\./g, '')) || 0; 
+                pembeli_datang_terlayani_online_A = parseInt(document.getElementById('pembeli_datang_terlayani_online_A').value) || 0;
+                pembeli_tambahan_online_A = parseInt(document.getElementById('pembeli_tambahan_online_A').value) || 0;
+                pembeli_tambahan_terlayani_online_A = parseInt(document.getElementById('pembeli_tambahan_terlayani_online_A').value) || 0;
+            }
+
+            let supplier_a_B = 0, supplier_b_B = 0, supplier_c_B = 0, supplier_d_B = 0;
+            const isProductBInvAvailable = isMedium && kuartil >= 5 && kuartil <= 7;
+            if (isProductBInvAvailable) {
+                supplier_a_B = parseInt(document.getElementById('supplierA_B').value) || 0;
+                supplier_b_B = parseInt(document.getElementById('supplierB_B').value) || 0;
+                supplier_c_B = parseInt(document.getElementById('supplierC_B').value) || 0;
+                supplier_d_B = parseInt(document.getElementById('supplierD_B').value) || 0;
+            }
+
+            let harga_offline_B = 0, pembeli_datang_terlayani_offline_B = 0, pembeli_tambahan_offline_B = 0, pembeli_tambahan_terlayani_offline_B = 0;
+            const isProductBOfflineAvailable = isMedium && kuartil >= 5 && kuartil <= 8;
+            if (isProductBOfflineAvailable) {
+                harga_offline_B = parseInt(document.getElementById('harga_offline_B').value.replace(/\./g, '')) || 0; 
+                pembeli_datang_terlayani_offline_B = parseInt(document.getElementById('pembeli_datang_terlayani_offline_B').value) || 0;
+                pembeli_tambahan_offline_B = parseInt(document.getElementById('pembeli_tambahan_offline_B').value) || 0;
+                pembeli_tambahan_terlayani_offline_B = parseInt(document.getElementById('pembeli_tambahan_terlayani_offline_B').value) || 0;
+            }
+
+            let harga_online_B = 0, pembeli_datang_terlayani_online_B = 0, pembeli_tambahan_online_B = 0, pembeli_tambahan_terlayani_online_B = 0;
+            const isProductBOnlineAvailable = isMedium && kuartil >= 5 && kuartil <= 8;
+            if (isProductBOnlineAvailable) {
+                harga_online_B = parseInt(document.getElementById('harga_online_B').value.replace(/\./g, '')) || 0; 
+                pembeli_datang_terlayani_online_B = parseInt(document.getElementById('pembeli_datang_terlayani_online_B').value) || 0;
+                pembeli_tambahan_online_B = parseInt(document.getElementById('pembeli_tambahan_online_B').value) || 0;
+                pembeli_tambahan_terlayani_online_B = parseInt(document.getElementById('pembeli_tambahan_terlayani_online_B').value) || 0;
+            }
+            
+            // Construct Decision Object
+            const decision = {
+                kuartil: kuartil,
+                marketing_1: marketing1,
+                marketing_2: marketing2,
+                marketing_3: marketing3,
+                supplier_a_A, supplier_b_A, supplier_c_A, supplier_d_A,
+                harga_offline_A, pembeli_datang_terlayani_offline_A,
+                pembeli_tambahan_offline_A, pembeli_tambahan_terlayani_offline_A,
+                harga_online_A, pembeli_datang_terlayani_online_A,
+                pembeli_tambahan_online_A, pembeli_tambahan_terlayani_online_A,
+                supplier_a_B, supplier_b_B, supplier_c_B, supplier_d_B,
+                harga_offline_B, pembeli_datang_terlayani_offline_B,
+                pembeli_tambahan_offline_B, pembeli_tambahan_terlayani_offline_B,
+                harga_online_B, pembeli_datang_terlayani_online_B,
+                pembeli_tambahan_online_B, pembeli_tambahan_terlayani_online_B,
+            };
+            
+            const payload = {
+                action: 'save_full_decision',
+                kelompok: currentUser.kelompok.toUpperCase(),
+                level: currentUser.level.toLowerCase(),
+                decision: decision
+            };
+
+            console.log('Sending full decision payload:', payload);
+
+            try {
+                const json = await sendToGoogleSheets(payload);
+                
+                hideLoading();
+                
+                if (json.success) {
+                    // Update Local Storage
+                    const index = decisions.findIndex(d => d.kuartil === kuartil);
+                    if (index !== -1) {
+                        decisions[index] = decision;
+                    } else {
+                        decisions.push(decision);
+                    }
+                    localStorage.setItem('decisions', JSON.stringify(decisions));
+                    
+                    // Update Strategy Usage
+                    loadStrategyUsage(); 
+                    updateStrategyCounterDisplay();
+                    
+                    alert(`✅ Keputusan Kuartil ${kuartil} berhasil disimpan!`);
+
+                    // Advance to next quarter
+                    goToNextQuarter(); 
+                    
+                } else {
+                    alert('❌ Gagal menyimpan keputusan: ' + (json.error || 'Terjadi kesalahan pada server.'));
+                }
+            } catch (error) {
+                // Error sudah ditangani di sendToGoogleSheets
+                console.error('Save full decision error:', error);
+            }
+        }
+        async function loadLeaderboard() {
+            const container = document.getElementById('leaderboardContent');
+            container.innerHTML = '<p class="text-csv-secondary-dark text-center py-8">Memuat data Leaderboard...</p>';
+            
+            try {
+                const url = `${API_URL}?action=get_leaderboard&level=${currentUser.level}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.success && data.leaderboard_data && Array.isArray(data.leaderboard_data)) {
+                    let html = `
+                        <div class="overflow-x-auto shadow-xl rounded-xl">
+                            <table class="min-w-full table-auto border-collapse">
+                                <thead>
+                                    <tr class="bg-csv-accent text-csv-dark text-left">
+                                        <th class="p-3 border-b-2 border-csv-highlight">Peringkat</th>
+                                        <th class="p-3 border-b-2 border-csv-highlight">Kelompok</th>
+                                        <th class="p-3 border-b-2 border-csv-highlight">Kas Akhir</th>
+                                        <th class="p-3 border-b-2 border-csv-highlight">Kuartil Selesai</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    
+                    data.leaderboard_data.forEach((item, index) => {
+                        const isCurrentTeam = item.kelompok === currentUser.kelompok;
+                        html += `
+                            <tr class="bg-csv-main text-csv-dark ${isCurrentTeam ? 'font-bold bg-yellow-100 border-4 border-yellow-500' : 'hover:bg-csv-secondary'}">
+                                <td class="p-3 border-b border-csv-highlight">${index + 1}</td>
+                                <td class="p-3 border-b border-csv-highlight">${item.kelompok} ${isCurrentTeam ? '(Anda)' : ''}</td>
+                                <td class="p-3 border-b border-csv-highlight">${formatCurrency(item.final_cash)}</td>
+                                <td class="p-3 border-b border-csv-highlight">${item.completed_quarter} / 8</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = `<p class="text-red-500 text-center py-8">❌ Gagal memuat data Leaderboard: ${data.error || 'Terjadi kesalahan tidak diketahui.'}</p>`;
+                }
+            } catch (error) {
+                container.innerHTML = `<p class="text-red-500 text-center py-8">Error jaringan/pemrosesan Leaderboard: ${error.message}</p>`;
+                console.error('Error fetching leaderboard:', error);
+            }
+        }
+        
+        async function fetchPdfUrlAndDisplay() {
+            const pdfViewer = document.getElementById('pdfViewerIframe');
+            const downloadButton = document.getElementById('pdfDownloadButton');
+            const maxQDownloadSpan = document.getElementById('maxQDownload');
+            
+            if (currentQuarter <= 1) {
+                downloadButton.disabled = true;
+                pdfViewer.src = 'about:blank';
+                maxQDownloadSpan.textContent = '1';
+                return;
+            }
+
+            showLoading('Memuat laporan PDF...');
+            downloadButton.disabled = true;
+
+            try {
+                const completedQ = currentQuarter;
+                const url = `${API_URL}?action=get_pdf_url&level=${currentUser.level}&kelompok=${currentUser.kelompok}&kuartil=${completedQ}`;
+                console.log('Fetching PDF from:', url);
+                
+                const response = await fetch(url);
+                const text = await response.text();
+                console.log('PDF Response:', text);
+                
+                const data = JSON.parse(text);
+
+                if (data.success && data.pdf_url) {
+                    pdfViewer.src = data.pdf_url;
+                    maxQDownloadSpan.textContent = completedQ;
+                    downloadButton.disabled = false;
+                } else {
+                    throw new Error(data.error || 'Link PDF tidak ditemukan.');
+                }
+            } catch (error) {
+                console.error('Error fetching PDF URL:', error);
+                pdfViewer.src = 'about:blank';
+                maxQDownloadSpan.textContent = currentQuarter > 1 ? currentQuarter - 1 : 1;
+                downloadButton.disabled = false; // Enable untuk manual download
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // FUNGSI BARU/EDITED: Hanya ambil URL PDF dan aktifkan tombol download
+        async function getFinalReportUrlAndEnableDownload() {
+            const pdfViewer = document.getElementById('pdfViewerIframe');
+            const downloadButton = document.getElementById('pdfDownloadButton');
+            const maxQDownloadSpan = document.getElementById('maxQDownload');
+            
+            // Kuartil yang selesai adalah currentQuarter - 1
+            const completedQ = currentQuarter > 1 ? currentQuarter - 1 : 0;
+            maxQDownloadSpan.textContent = completedQ > 0 ? completedQ : 1;
+            
+            if (completedQ < 1) { 
+                downloadButton.disabled = true;
+                return;
+            }
+
+            showLoading('Mengecek ketersediaan laporan PDF...');
+            downloadButton.disabled = true;
+
+            try {
+                // Fetch URL PDF untuk kuartil terakhir yang sudah selesai
+                const url = `${API_URL}?action=get_pdf_url&level=${currentUser.level}&kelompok=${currentUser.kelompok}&kuartil=${completedQ}`;
+                console.log('Fetching PDF URL from:', url);
+                
+                const response = await fetch(url);
+                const text = await response.text();
+                
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                     throw new Error('Respons bukan format JSON: ' + text.substring(0, 50));
+                }
+
+                if (data.success && data.pdf_url) {
+                    // Simpan URL untuk digunakan di fungsi downloadPDF
+                    downloadButton.dataset.pdfUrl = data.pdf_url;
+                    downloadButton.disabled = false;
+                    console.log('PDF URL found and button enabled.');
+                } else {
+                    downloadButton.disabled = true;
+                    throw new Error(data.error || 'Link PDF tidak ditemukan. Laporan belum selesai diproses.');
+                }
+            } catch (error) {
+                console.error('Error fetching PDF URL:', error);
+                downloadButton.disabled = true;
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function displayPdfInIframe(pdfUrl) {
+            const pdfViewer = document.getElementById('pdfViewerIframe');
+            showLoading('Menampilkan PDF...');
+            
+            const encodedUrl = encodeURIComponent(pdfUrl);
+            const googleViewerUrl = `https://docs.google.com/viewer?url=${encodedUrl}&embedded=true`;
+            
+            console.log('Loading PDF via Google Viewer:', googleViewerUrl);
+
+            pdfViewer.src = googleViewerUrl;
+            
+            // Sembunyikan loading setelah beberapa saat (beri waktu untuk Google Viewer memuat)
+            setTimeout(hideLoading, 3000); 
+        }
+        
+        async function loadReport() {
+            const container = document.getElementById('reportContentHistory');
+            document.getElementById('reportTeam').textContent = currentUser.kelompok;
+
+            // 1. Ambil URL dan aktifkan/nonaktifkan tombol download
+            await getFinalReportUrlAndEnableDownload();
+
+            // 2. Kosongkan iFrame saat tab dibuka
+            document.getElementById('pdfViewerIframe').src = 'about:blank';
+
+            // 3. Display Decision History
+            if (decisions.length === 0) {
+                container.innerHTML = '<p class="text-csv-secondary-dark text-center py-8">Belum ada keputusan yang disimpan.</p>';
+                return;
+            }
+
+            container.innerHTML = ''; // Clear existing content
+
+            // Sort decisions to show from Kuartil 1
+            decisions.sort((a, b) => a.kuartil - b.kuartil).forEach(decision => {
+                // Prepare data for display
+                const isMedium = currentUser.level === 'medium';
+                const isProductBVisible = isMedium && decision.kuartil >= 5;
+                const isProductBInvAvailable = isMedium && decision.kuartil >= 5 && decision.kuartil <= 7;
+                const isProductBOnlineAvailable = isMedium && decision.kuartil >= 5 && decision.kuartil <= 8;
+                const onlineA_start_kuartil = currentUser.level === 'easy' ? 5 : 1;
+                const isProductAOnlineVisible = decision.kuartil >= onlineA_start_kuartil;
+                
+                let html = `
+                    <div class="bg-csv-main p-4 rounded-xl shadow-md border-4 border-csv-highlight">
+                        <h4 class="text-xl font-bold text-csv-dark mb-3 border-b pb-2">Kuartil ${decision.kuartil}</h4>
+                        
+                        <div class="mb-4">
+                            <h5 class="font-bold text-csv-secondary-dark mb-2">Strategi Pemasaran:</h5>
+                            <ul class="list-disc list-inside ml-2 text-sm text-csv-dark">
+                                <li>${decision.marketing_1 || '-'}</li>
+                                <li>${decision.marketing_2 || '-'}</li>
+                                <li>${decision.marketing_3 || '-'}</li>
+                            </ul>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h5 class="font-bold text-csv-secondary-dark mb-2">Pengadaan Produk A (Unit):</h5>
+                                <ul class="list-disc list-inside ml-2 text-sm text-csv-dark">
+                                    <li>Supplier A: ${formatNumber(decision.supplier_a_A)}</li>
+                                    <li>Supplier B: ${formatNumber(decision.supplier_b_A)}</li>
+                                    <li>Supplier C: ${formatNumber(decision.supplier_c_A)}</li>
+                                    <li>Supplier D: ${formatNumber(decision.supplier_d_A)}</li>
+                                </ul>
+                            </div>
+                            ${isProductBInvAvailable ? `
+                            <div>
+                                <h5 class="font-bold text-csv-secondary-dark mb-2">Pengadaan Produk B (Unit):</h5>
+                                <ul class="list-disc list-inside ml-2 text-sm text-csv-dark">
+                                    <li>Supplier A: ${formatNumber(decision.supplier_a_B)}</li>
+                                    <li>Supplier B: ${formatNumber(decision.supplier_b_B)}</li>
+                                    <li>Supplier C: ${formatNumber(decision.supplier_c_B)}</li>
+                                    <li>Supplier D: ${formatNumber(decision.supplier_d_B)}</li>
+                                </ul>
+                            </div>` : ''}
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                                <h5 class="font-bold text-csv-secondary-dark mb-2">Penjualan Offline Produk A:</h5>
+                                <ul class="list-disc list-inside ml-2 text-sm text-csv-dark">
+                                    <li>Harga: ${formatCurrency(decision.harga_offline_A)}</li>
+                                    <li>Pembeli Datang Terlayani: ${formatNumber(decision.pembeli_datang_terlayani_offline_A)}</li>
+                                    <li>Pembeli Tambahan Terlayani: ${formatNumber(decision.pembeli_tambahan_terlayani_offline_A)}</li>
+                                </ul>
+                            </div>
+                            ${isProductBVisible ? `
+                            <div>
+                                <h5 class="font-bold text-csv-secondary-dark mb-2">Penjualan Offline Produk B:</h5>
+                                <ul class="list-disc list-inside ml-2 text-sm text-csv-dark">
+                                    <li>Harga: ${formatCurrency(decision.harga_offline_B)}</li>
+                                    <li>Pembeli Datang Terlayani: ${formatNumber(decision.pembeli_datang_terlayani_offline_B)}</li>
+                                    <li>Pembeli Tambahan Terlayani: ${formatNumber(decision.pembeli_tambahan_terlayani_offline_B)}</li>
+                                </ul>
+                            </div>` : ''}
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            ${isProductAOnlineVisible ? `
+                            <div>
+                                <h5 class="font-bold text-csv-secondary-dark mb-2">Penjualan Online Produk A:</h5>
+                                <ul class="list-disc list-inside ml-2 text-sm text-csv-dark">
+                                    <li>Harga: ${formatCurrency(decision.harga_online_A)}</li>
+                                    <li>Pembeli Datang Terlayani: ${formatNumber(decision.pembeli_datang_terlayani_online_A)}</li>
+                                    <li>Pembeli Tambahan Terlayani: ${formatNumber(decision.pembeli_tambahan_terlayani_online_A)}</li>
+                                </ul>
+                            </div>` : ''}
+                            ${isProductBOnlineAvailable ? `
+                            <div>
+                                <h5 class="font-bold text-csv-secondary-dark mb-2">Penjualan Online Produk B:</h5>
+                                <ul class="list-disc list-inside ml-2 text-sm text-csv-dark">
+                                    <li>Harga: ${formatCurrency(decision.harga_online_B)}</li>
+                                    <li>Pembeli Datang Terlayani: ${formatNumber(decision.pembeli_datang_terlayani_online_B)}</li>
+                                    <li>Pembeli Tambahan Terlayani: ${formatNumber(decision.pembeli_tambahan_terlayani_online_B)}</li>
+                                </ul>
+                            </div>` : ''}
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+        }
+        
+        async function downloadPDF() {
+            const downloadButton = document.getElementById('pdfDownloadButton');
+            const pdfUrl = downloadButton.dataset.pdfUrl;
+
+            if (!pdfUrl) {
+                alert('⚠️ URL Laporan PDF belum tersedia. Coba refresh halaman atau hubungi administrator.');
+                return;
+            }
+            
+            // Nonaktifkan tombol saat proses
+            downloadButton.disabled = true;
+            const originalText = downloadButton.textContent;
+            downloadButton.textContent = 'Memproses Download...';
+            
+            try {
+                // 1. Tampilkan di iFrame (untuk preview)
+                displayPdfInIframe(pdfUrl);
+
+                // 2. Buka di tab baru (untuk trigger download atau full view)
+                window.open(pdfUrl, '_blank');
+                
+            } catch (error) {
+                alert('⚠️ Error saat memproses PDF: ' + error.message);
+            } finally {
+                downloadButton.disabled = false;
+                downloadButton.textContent = originalText;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.format-rupiah').forEach(input => {
+                input.addEventListener('input', function () {
+                    // Hapus semua non-digit
+                    let angka = this.value.replace(/\D/g, "");
+
+                    if (!angka) {
+                        this.value = "";
+                        return;
+                    }
+
+                    // Format ribuan
+                    this.value = new Intl.NumberFormat("id-ID").format(angka);
+                });
+            });
+        });
+
+         </script>
+</body>
+</html>

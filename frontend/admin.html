@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Ready Set Sell</title>
+    <style>
+        /* --- RESET & BASIC --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #FFF8E1; /* Krem Terang (Lantai Gudang) */
+            background-image: radial-gradient(#F6BB42 1px, transparent 1px); 
+            background-size: 20px 20px;
+            min-height: 100vh;
+            padding: 20px;
+            color: #5D4037; 
+        }
+
+        /* --- COMPONENTS --- */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 0 rgba(0,0,0,0.1); 
+            border: 4px solid #C07848; /* Border Cokelat Kayu */
+            padding: 40px;
+            width: 100%;
+            position: relative;
+        }
+
+        /* --- TYPOGRAPHY --- */
+        h1 {
+            color: #C07848; 
+            font-weight: 800;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+        
+        .subtitle {
+            color: #8D6E63;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 25px;
+        }
+
+        /* --- FORM --- */
+        .form-group { margin-bottom: 20px; text-align: left; }
+        
+        label { 
+            display: block; margin-bottom: 8px; font-weight: 700; color: #5D4037;
+        }
+
+        input {
+            width: 100%; padding: 15px; 
+            border: 3px solid #E0E0E0;
+            border-radius: 12px; 
+            font-size: 16px; transition: all 0.2s; outline: none;
+            color: #5D4037;
+        }
+
+        input:focus { 
+            border-color: #F6BB42; 
+            box-shadow: 0 0 0 4px rgba(246, 187, 66, 0.2); 
+        }
+
+        /* --- BUTTONS --- */
+        .btn {
+            padding: 14px 24px; border: none; border-radius: 12px; 
+            font-size: 16px; font-weight: 700; cursor: pointer; 
+            transition: all 0.1s; display: inline-flex; align-items: center; justify-content: center;
+            gap: 8px; color: white; text-decoration: none;
+            box-shadow: 0 5px 0 rgba(0,0,0,0.15);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,0.15); }
+
+        .btn-primary { background-color: #F6BB42; }
+        .btn-primary:hover { background-color: #f4a918; }
+
+        .btn-danger { background-color: #E9573F; }
+        .btn-danger:hover { background-color: #da442d; }
+
+        .btn-secondary { background-color: #4FC1E9; }
+        .btn-secondary:hover { background-color: #3bafda; }
+
+        /* --- TABLE STYLE (FIXED BORDERS) --- */
+        .table-container { 
+            overflow-x: auto; border-radius: 15px; 
+            border: 3px solid #C07848; 
+            margin-top: 20px;
+        }
+        
+        table { width: 100%; border-collapse: collapse; background: white; }
+        
+        thead { background-color: #C07848; }
+        
+        th { 
+            padding: 18px; text-align: left; color: white; 
+            font-weight: 700; text-transform: uppercase;
+            /* Tambahan: Garis pemisah antar Header */
+            border-right: 2px solid rgba(255,255,255,0.3);
+        }
+        th:last-child { border-right: none; }
+        
+        td { padding: 15px; border-bottom: 2px solid #F3E5F5; vertical-align: middle; }
+        
+        /* Kolom Level (Kiri) */
+        .level-cell { 
+            font-weight: 800; background-color: #FFF8E1; color: #C07848;
+            text-align: center; 
+            border-right: 2px solid #E0E0E0; /* Garis kanan level */
+            font-size: 1.1em;
+        }
+
+        /* Kolom Aksi (Kanan) */
+        .action-cell {
+            text-align: center; 
+            background: #fff;
+            border-left: 2px solid #E0E0E0; /* FIXED: Garis pemisah kiri untuk kolom aksi */
+        }
+
+        /* --- EXTRAS --- */
+        .login-section { max-width: 420px; margin: 10vh auto; text-align: center; }
+        
+        .danger-zone {
+            background: #FFF5F5; border: 3px dashed #E9573F; 
+            border-radius: 20px; padding: 25px; margin-top: 40px; 
+            text-align: center; position: relative;
+        }
+        .danger-badge {
+            background: #E9573F; color: white; padding: 5px 15px; 
+            border-radius: 20px; font-weight: bold; font-size: 0.85em;
+            display: inline-block; margin-bottom: 10px;
+        }
+        
+        .message { padding: 15px; border-radius: 12px; margin-bottom: 20px; font-weight: bold; text-align: center;}
+        .message.success { background: #E8F5E9; color: #2E7D32; border: 2px solid #C8E6C9; }
+        .message.error { background: #FFEBEE; color: #C62828; border: 2px solid #FFCDD2; }
+
+        /* Loading */
+        #loadingOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.9); z-index: 9999;
+            display: none; justify-content: center; align-items: center;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 6px solid #EEE;
+            border-top: 6px solid #F6BB42; border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .modal {
+            display: none; /* JS akan mengubah ini menjadi flex */
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            
+            /* Pastikan properti ini ada untuk centering */
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            position: relative;
+            margin: 0; 
+            
+            width: 90%;
+            height: 90%;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 5px solid #C07848;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loadingOverlay">
+        <div style="text-align: center;">
+            <div class="spinner"></div>
+            <h3 style="margin-top: 20px; color: #F6BB42;">Processing...</h3>
+        </div>
+    </div>
+
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <h2 style="text-align: center; color: #C07848; margin-bottom: 20px;">🔑 Ganti Password</h2>
+            <form onsubmit="handleChangePassword(event)">
+                <div class="form-group">
+                    <label>Password Lama</label>
+                    <input type="password" id="oldPass" required>
+                </div>
+                <div class="form-group">
+                    <label>Password Baru</label>
+                    <input type="password" id="newPass" required>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="loginSection" class="login-section">
+        <div class="card">
+            <div style="background: #C07848; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: white; font-size: 30px; box-shadow: 0 4px 0 rgba(0,0,0,0.2);">🔐</div>
+            <h1>Admin Login</h1>
+            <p class="subtitle">Ready, Set, Sell Dashboard</p>
+            
+            <div id="loginMessage"></div>
+            
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <input type="password" id="adminPassword" placeholder="Masukkan Password..." required style="text-align: center; font-weight: bold;">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Masuk Panel 🚀</button>
+            </form>
+            <div style="margin-top: 20px;">
+                 <a href="index.html" style="color: #999; text-decoration: none; font-weight: 600;">← Kembali ke Menu</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="adminSection" class="container" style="display: none; margin-top: 40px;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 20px;">
+            <div>
+                <h1>📦 Dashboard Gudang</h1>
+                <p class="subtitle" style="margin-bottom: 0;">Kelola data permainan dan kelompok.</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="openPasswordModal()">🔑 Ganti Password</button>
+                <button class="btn btn-danger" onclick="logout()">🚪 Logout</button>
+            </div>
+        </div>
+        
+        <div id="message"></div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="color: #5D4037;">Data Kelompok</h3>
+                <button class="btn btn-secondary" style="font-size: 0.9em;" onclick="loadTableData()">🔄 Refresh Data</button>
+            </div>
+
+            <div class="table-container">
+                <table id="mainTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px; text-align: center;">LEVEL</th>
+                            <th style="width: 200px;">KELOMPOK</th>
+                            <th style="text-align: center;">AKSI</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="3" style="text-align:center; padding: 60px; color: #888;">⏳ Menghubungkan ke gudang data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="danger-zone">
+                <span class="danger-badge">⚠️ AREA BERBAHAYA</span>
+                <h3 style="margin-top: 5px; color: #C62828;">Reset Total Permainan</h3>
+                <p style="margin-bottom: 20px; color: #666;">Tindakan ini akan <strong>MENGHAPUS SEMUA</strong> data dari sistem. Data yang hilang tidak dapat dikembalikan.</p>
+                <button class="btn btn-danger" onclick="confirmDeleteAll()">🔥 Hapus Semua Data (Reset Total)</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // PASTIKAN URL API INI SESUAI DENGAN DEPLOYMENT TERBARU
+        const API_URL = 'https://script.google.com/macros/s/AKfycbyEu0VFm1Yqsli7_gSCNDpLPDTAlpUP2OuAmf2tQm2yuF-hGQE-C6tOcO0LF3n9MxdH/exec';
+
+        const PAIRS_CONFIG = [
+            { level: 'Easy', groups: ['A', 'B'], key: 'EASY_AB' },
+            { level: 'Easy', groups: ['C', 'D'], key: 'EASY_CD' },
+            { level: 'Easy', groups: ['E', 'F'], key: 'EASY_EF' },
+            { level: 'Easy', groups: ['G', 'H'], key: 'EASY_GH' },
+            { level: 'Easy', groups: ['I', 'J'], key: 'EASY_IJ' },
+            { level: 'Medium', groups: ['A', 'B'], key: 'MEDIUM_AB' },
+            { level: 'Medium', groups: ['C', 'D'], key: 'MEDIUM_CD' },
+            { level: 'Medium', groups: ['E', 'F'], key: 'MEDIUM_EF' },
+            { level: 'Medium', groups: ['G', 'H'], key: 'MEDIUM_GH' },
+            { level: 'Medium', groups: ['I', 'J'], key: 'MEDIUM_IJ' }
+        ];
+
+        // --- UTILITIES ---
+        function showLoading(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.style.display = show ? 'flex' : 'none';
+        }
+
+        function showMsg(text, isError = false) {
+            const el = document.getElementById('message');
+            el.innerHTML = `<div class="message ${isError ? 'error' : 'success'}">${text}</div>`;
+            el.scrollIntoView({ behavior: 'smooth' });
+            setTimeout(() => el.innerHTML = '', 5000);
+        }
+
+        // --- AUTH ---
+        async function handleLogin(event) {
+            event.preventDefault();
+            const password = document.getElementById('adminPassword').value;
+            const msg = document.getElementById('loginMessage');
+            
+            showLoading(true);
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'adminLogin', password: password }),
+                    mode: 'cors'
+                });
+                
+                const data = await response.json();
+                showLoading(false);
+
+                if(data.success) {
+                    document.getElementById('loginSection').style.display = 'none';
+                    document.getElementById('adminSection').style.display = 'block';
+                    loadTableData(); 
+                } else {
+                    msg.innerHTML = `<div class="message error">${data.message}</div>`;
+                }
+            } catch (e) {
+                showLoading(false);
+                msg.innerHTML = `<div class="message error">Error Koneksi: ${e.message}</div>`;
+            }
+        }
+
+        const logout = () => {
+            window.location.href = "index.html";
+        };
+
+
+        // --- CHANGE PASSWORD ---
+        function openPasswordModal() { document.getElementById('passwordModal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('passwordModal').style.display = 'none'; }
+        
+        async function handleChangePassword(e) {
+            e.preventDefault();
+            const oldPass = document.getElementById('oldPass').value;
+            const newPass = document.getElementById('newPass').value;
+            
+            closeModal();
+            showLoading(true);
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        action: 'changePassword', 
+                        oldPassword: oldPass,
+                        newPassword: newPass
+                    }),
+                    mode: 'cors'
+                });
+                const res = await response.json();
+                showLoading(false);
+                
+                if(res.success) {
+                    alert("✅ Password berhasil diganti!");
+                    logout();
+                } else {
+                    alert("❌ Gagal: " + res.message);
+                }
+            } catch(err) {
+                showLoading(false);
+                alert("❌ Error: " + err.message);
+            }
+        }
+
+        // --- TABLE RENDER LOGIC (UPDATED WITH CLASSES) ---
+        async function loadTableData() {
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            let html = '';
+            const levels = ['Easy', 'Medium'];
+            
+            levels.forEach(currentLevel => {
+                const pairs = PAIRS_CONFIG.filter(p => p.level === currentLevel);
+                const totalRows = pairs.length * 2; 
+                
+                // Pair pertama
+                const firstPair = pairs[0];
+                html += `
+                <tr>
+                    <td class="level-cell" rowspan="${totalRows}">${currentLevel}</td>
+                    <td>Kelompok <strong>${firstPair.groups[0]}</strong></td>
+                    
+                    <td rowspan="2" class="action-cell">
+                        <button class="btn btn-danger" style="font-size:13px; padding: 10px 15px;" onclick="deletePair('${firstPair.key}', '${currentLevel} ${firstPair.groups.join('&')}')">
+                            🗑️ Hapus Data untuk Kelompok ${firstPair.groups[0]} & ${firstPair.groups[1]} - Level  ${currentLevel}
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Kelompok <strong>${firstPair.groups[1]}</strong></td>
+                </tr>`;
+                
+                // Sisa pair
+                for(let i = 1; i < pairs.length; i++) {
+                    const p = pairs[i];
+                    html += `
+                    <tr>
+                        <td>Kelompok <strong>${p.groups[0]}</strong></td>
+                        <td rowspan="2" class="action-cell">
+                             <button class="btn btn-danger" style="font-size:13px; padding: 10px 15px;" onclick="deletePair('${p.key}', '${currentLevel} ${p.groups.join('&')}')">
+                            🗑️ Hapus Data untuk Kelompok ${p.groups[0]} & ${p.groups[1]} - Level  ${currentLevel}
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Kelompok <strong>${p.groups[1]}</strong></td>
+                    </tr>`;
+                }
+            });
+            tbody.innerHTML = html;
+        }
+
+        async function deletePair(pairKey, label) {
+            if(!confirm(`⚠️ Hapus data untuk ${label}?\nData kuartil akan di-reset.`)) return;
+            
+            showLoading(true);
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'clear_pair', pairKey: pairKey }),
+                    mode: 'cors'
+                });
+                const res = await response.json();
+                showLoading(false);
+                if(res.success) showMsg(res.message);
+                else showMsg(res.error, true);
+            } catch(e) {
+                showLoading(false);
+                showMsg(e.message, true);
+            }
+        }
+
+        async function confirmDeleteAll() {
+            const code = prompt("Ketik 'RESET ALL' untuk menghapus SEMUA data:");
+            if(code !== 'RESET ALL') return;
+            
+            showLoading(true);
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'clear_all_sheets' }),
+                    mode: 'cors'
+                });
+                const res = await response.json();
+                showLoading(false);
+                alert(res.success ? res.message : res.error);
+            } catch(e) {
+                showLoading(false);
+                alert('Error: ' + e.message);
+            }
+        }
+        
+        window.onclick = function(event) {
+            const modal = document.getElementById('passwordModal');
+            if (event.target == modal) closeModal();
+        }
+    </script>
+</body>
+</html>
