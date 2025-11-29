@@ -1,38 +1,19 @@
-// Google Apps Script untuk Ready Set Sell - FIXED VERSION
-// Tambahkan logging yang lebih detail untuk debugging
-
-// const SHEET_IDS = {
-//   // Easy Level - 5 sheets (AB, CD, EF, GH, IJ)
-//   'EASY_AB': '1W9I9iZwjONuKpwifca3tqLuMOkDp95Ii_8vhkFsYh3A',
-//   'EASY_CD': '15cNoDweUnjP2W856HwdZwbiu0HYOnOkMfrr_tSJ812U',
-//   'EASY_EF': '1UuMHnBgB7nWOBmXFAOhcplLce2yzeBnHOv9QeKjfI8A',
-//   'EASY_GH': '1yrH0BnEBUEG-VFnXKixj5Hu4iObIm1kkysF6VC5Szk4',
-//   'EASY_IJ': '1sv9zO1gBK7wsvCWYwUb_GkEruiW91W4Aa3cOWpr1Dzg',
-  
-//   // Medium Level - 5 sheets (AB, CD, EF, GH, IJ)
-//   'MEDIUM_AB': '10kEqztFbgS-4J01O4tlnsNsG4eGfgEBwMYFtqSt4_7s',
-//   'MEDIUM_CD': '1Eqd3l8WgvTpdIaKB7FigoI7cVy32W0_2Ax-C0_y1w8I',
-//   'MEDIUM_EF': '1zAP9kwD37llZSiyBd5pqohCwLTjCFdN6DAAQ91D1QNI',
-//   'MEDIUM_GH': '1XFTYpuS6bW903a7HvgLWSkFXpVDrGlAQffXdS5IMlPU',
-//   'MEDIUM_IJ': '1lwEboIDh5kvFDZ5YjKtEw1jPREmt0Ri5vAH4VZtB47U'
-// };
-
-
 const SHEET_IDS = {
-  // Easy Level - 5 sheets (AB, CD, EF, GH, IJ)
+  // EASY LEVEL
   'EASY_AB': '1crDj0ps9SOPYXH7qZj6yIvSY2QsvpWRD1NRUknR0gaM',
-  'EASY_CD': '15cNoDweUnjP2W856HwdZwbiu0HYOnOkMfrr_tSJ812U',
-  'EASY_EF': '1UuMHnBgB7nWOBmXFAOhcplLce2yzeBnHOv9QeKjfI8A',
-  'EASY_GH': '1yrH0BnEBUEG-VFnXKixj5Hu4iObIm1kkysF6VC5Szk4',
-  'EASY_IJ': '1sv9zO1gBK7wsvCWYwUb_GkEruiW91W4Aa3cOWpr1Dzg',
-  
-  // Medium Level - 5 sheets (AB, CD, EF, GH, IJ)
-  'MEDIUM_AB': '10kEqztFbgS-4J01O4tlnsNsG4eGfgEBwMYFtqSt4_7s',
-  'MEDIUM_CD': '1Eqd3l8WgvTpdIaKB7FigoI7cVy32W0_2Ax-C0_y1w8I',
-  'MEDIUM_EF': '1zAP9kwD37llZSiyBd5pqohCwLTjCFdN6DAAQ91D1QNI',
-  'MEDIUM_GH': '1XFTYpuS6bW903a7HvgLWSkFXpVDrGlAQffXdS5IMlPU',
-  'MEDIUM_IJ': '1lwEboIDh5kvFDZ5YjKtEw1jPREmt0Ri5vAH4VZtB47U'
+  'EASY_CD': '1ojsKu8FaZpgy3PprsbDH3RAbrOZJecsgxvBqjYKbToY',
+  'EASY_EF': '1NhP33BXKC1z1hcv4rmcwcjVOvPfEGTlI8Fn-vXK-l2Q',
+  'EASY_GH': '1T_ZmsdZ9Mv6dXAXgmBh25fKi0Gybtgur7BbOpac1mFc',
+  'EASY_IJ': '1onG1aJ7zJA_pdXwDon3cgvGz1sv4bxMeY1BK1LDWpy0',
+
+  // MEDIUM LEVEL
+  'MEDIUM_AB': '1D5YkSN5HPbK28Ylre8WEutoIGq2-SZOPJvMbA3BLWf8',
+  'MEDIUM_CD': '1FsC3CMo_iGi4h8rngBZZg9iZf8XQHUJmqBWj7NCjtSo',
+  'MEDIUM_EF': '1Qt8nyT3PZaoXI4JnZ3V6R2X0dJxlm_Q0BF-ka6_IA2w',
+  'MEDIUM_GH': '1FcraVtELUYLiN4cpVrJyWwPL_hULRZnU1WcU9PcOa4g',
+  'MEDIUM_IJ': '1q-FBxdEBBCRf-yDd22BcgwQCenRqRKWaqzU6K1BT2yY'
 };
+
 
 const KELOMPOK_MAPPING = { 
   // Easy Level
@@ -61,8 +42,8 @@ const KELOMPOK_MAPPING = {
 };
 
 // Row mappings (tetap sama)
-const PEMASARAN_ROW_MAPPING = { 1:5, 2:6, 3:7, 4:8, 5:10, 6:11, 7:12, 8:13 };
-const PENGADAAN_A_ROW_MAPPING = { 1:17, 2:18, 3:19, 4:20, 5:22, 6:23, 7:24, 8:25 };
+const PEMASARAN_ROW_MAPPING = { 1:5, 2:6, 3:7, 4:8, 5:9, 6:10, 7:11, 8:12 };
+const PENGADAAN_A_ROW_MAPPING = { 1:17, 2:18, 3:19, 4:20, 5:21, 6:22, 7:23, 8:24 };
 const PENGADAAN_B_ROW_MAPPING = { 5:29, 6:30, 7:31, 8:32 };
 const OFFLINE_A_ROW_MAPPING_MEDIUM = { 1:36, 2:37, 3:38, 4:39, 5:40, 6:41, 7:42, 8:43 };
 const OFFLINE_A_ROW_MAPPING_EASY = { 1:28, 2:29, 3:30, 4:31, 5:32, 6:33, 7:34, 8:35 };
@@ -73,13 +54,15 @@ const ONLINE_B_ROW_MAPPING_MEDIUM = { 5:65, 6:66, 7:67, 8:68 };
 
 
 function createCORSResponse(data) {
+  // VERSI BENAR (Tanpa setHeader)
   return ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 function doOptions(e) {
-  return createCORSResponse({ status: 'ok' }); 
+  // VERSI BENAR (Cukup return kosong, Google yang urus sisanya)
+  return ContentService.createTextOutput(''); 
 }
 
 /* --------- Admin Functions ------------*/
@@ -108,19 +91,28 @@ function hashPassword(password) {
 }
 
 function verifyAdminLogin(inputPassword) {
+  if (!inputPassword) {
+    return { success: false, message: "Password tidak boleh kosong." };
+  }
+  // ---------------------------
+
   const scriptProps = PropertiesService.getScriptProperties();
   const storedHash = scriptProps.getProperty("ADMIN_PASSWORD_HASH");
 
   if (!storedHash) {
-    return { success: false, message: "Admin password belum diset." };
+    return { success: false, message: "Admin password belum diset di server." };
   }
 
-  const inputHash = hashPassword(inputPassword);
-
-  if (inputHash === storedHash) {
-    return { success: true, message: "Login admin berhasil!" };
-  } else {
-    return { success: false, message: "Password salah." };
+  try {
+    const inputHash = hashPassword(inputPassword);
+    if (inputHash === storedHash) {
+      return { success: true, message: "Login admin berhasil!" };
+    } else {
+      return { success: false, message: "Password salah." };
+    }
+  } catch (e) {
+    Logger.log("Error hashing: " + e.toString());
+    return { success: false, message: "Server error saat verifikasi password." };
   }
 }
 
@@ -772,6 +764,22 @@ function doGet(e) {
       return createCORSResponse({ success:false, error: 'Spreadsheet ID for ' + config.key + ' not configured/invalid.'});
     }
 
+    if (action === 'get_sheet_links') {
+      var links = {};
+      // Loop object SHEET_IDS untuk buat URL
+      for (var key in SHEET_IDS) {
+        if (Object.prototype.hasOwnProperty.call(SHEET_IDS, key)) {
+          var id = SHEET_IDS[key];
+          // Buat URL Google Sheet
+          links[key] = 'https://docs.google.com/spreadsheets/d/' + id + '/edit';
+        }
+      }
+      return createCORSResponse({
+        success: true,
+        links: links  // <--- INI YANG DITUNGGU HTML ANDA
+      });
+    }
+
     if (action === 'get_sales_marketing') {
       if (!kuartil) {
         return createCORSResponse({ success: false, error: 'Parameter kuartil diperlukan.' });
@@ -873,9 +881,31 @@ function doPost(e) {
     }
 
     if (action === "changePassword") {
-      return createCORSResponse(
-        changeAdminPassword(data.oldPassword, data.newPassword)
-      );
+      return withLock(function() {
+         return createCORSResponse(changeAdminPassword(data.oldPassword, data.newPassword));
+      });
+    }
+
+    if (action === 'clear_pair') {
+      return withLock(function() {
+        var pairKey = data.pairKey; 
+        var sheetId = SHEET_IDS[pairKey];
+        
+        if (!sheetId) return createCORSResponse({ success: false, error: 'Sheet ID not found' });
+
+        var level = pairKey.startsWith('EASY') ? 'Easy' : 'Medium';
+        
+        // Loop 8 kuartil, hapus row untuk P1 dan P2
+        for (var k = 1; k <= 8; k++) {
+            clearQuarterData(sheetId, 'P1', level, k);
+            clearQuarterData(sheetId, 'P2', level, k);
+        }
+
+        return createCORSResponse({
+          success: true,
+          message: 'Data pasangan ' + pairKey + ' berhasil dihapus (Kuartil 1-8)'
+        });
+      }, 120000);
     }
 
     if (action === 'clear_all_quarters') {
