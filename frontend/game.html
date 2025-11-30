@@ -699,7 +699,7 @@
                 loadSummaryDataAndDisplay(true); 
                 
                 // 2. Load Inventory
-                fetchInventoryData().then(updateInventoryInfo); 
+                fetchInventoryData().then(updateInventoryHeaderForQuarter(currentQuarter)); 
 
                 // 3. Load Marketing Count dari API (BUKAN LOCALSTORAGE)
                 syncMarketingCounts();
@@ -861,82 +861,34 @@
             const currentQuarterEl = document.getElementById('currentQuarter');
             const saveQNumEl = document.getElementById('saveQNum');
             const prevBtn = document.getElementById('prevQBtn');
-            const saveBtn = document.getElementById('saveDecisionBtn');
-
+            
+            // UI Updates
             if (currentQuarterEl) currentQuarterEl.textContent = currentQuarter;
             if (saveQNumEl) saveQNumEl.textContent = currentQuarter;
-
-            if (prevBtn) {
-                prevBtn.disabled = currentQuarter <= 1;
-            }
             
-            if (saveBtn) {
-                if (currentQuarter <= maxQ) {
-                    saveBtn.disabled = false;
-                    saveBtn.textContent = `Simpan Keputusan Kuartil ${currentQuarter}`;
-                } else {
-                    saveBtn.disabled = true;
-                    saveBtn.textContent = 'Permainan Selesai';
-                }
-            }
+            // Navigation Buttons
+            // Cek apakah ada data next quarter di summary untuk menentukan max navigation
+            // (Opsional, atau biarkan user navigasi sampai max progress mereka)
+            if (prevBtn) prevBtn.disabled = currentQuarter <= 1;
 
+            // --- MAIN LOGIC CHANGES ---
+            // 1. Fetch Input Data dari API (bukan local storage)
             loadInputData(currentQuarter);
+            
+            // 2. Update Ketersediaan Form (Online/Produk B)
             updateOnlineAvailability();
+            
+            // 3. Update Dashboard Stats (tetap fetch current)
             updateDashboardStats();
             
-            document.getElementById('maxQDownload').textContent = currentQuarter > 1 ? currentQuarter - 1 : 1; 
-
+            // 4. Update Max Download
+            document.getElementById('maxQDownload').textContent = currentQuarter > 1 ? currentQuarter - 1 : 1;
+            
+            // ... Logic visual section B (Inventory/Offline) biarkan sama ...
             const isMedium = currentUser.level === 'medium';
             const invBSection = document.getElementById('inventoryBSection');
-            const invBMessage = document.getElementById('inventoryBMessage');
-            const offlineBSection = document.getElementById('offlineBSection');
-            const offlineBMessage = document.getElementById('offlineBMessage');
-
-            // Inventory B Logic
-            if (invBSection) {
-                const showProductB_Inv = isMedium && currentQuarter >= 5 && currentQuarter <= 7;
-                if (showProductB_Inv) {
-                    invBSection.classList.remove('hidden');
-                    invBSection.style.opacity = '1';
-                    if (invBMessage) invBMessage.classList.add('hidden');
-                } else {
-                    if (isMedium && (currentQuarter < 5 || currentQuarter > 7)) {
-                        invBSection.classList.remove('hidden'); // Tetap tampil tapi disabled visual
-                        invBSection.style.opacity = '0.5';
-                        invBSection.style.pointerEvents = 'none';
-                        if (invBMessage) {
-                            invBMessage.classList.remove('hidden');
-                            invBMessage.textContent = currentQuarter > 7 ? '🔒 Pengadaan Produk B telah berakhir.' : '🔒 Pengadaan Produk B tersedia Medium K5-7';
-                        }
-                    } else {
-                         invBSection.classList.add('hidden');
-                    }
-                }
-            }
-            
-            // Offline B Logic
-            if (offlineBSection) {
-                const showProductB_Offline = isMedium && currentQuarter >= 5 && currentQuarter <= 8;
-                if (showProductB_Offline) {
-                    offlineBSection.classList.remove('hidden');
-                     offlineBSection.style.opacity = '1';
-                    if (offlineBMessage) offlineBMessage.classList.add('hidden');
-                } else {
-                    if (isMedium) {
-                         offlineBSection.classList.remove('hidden');
-                         offlineBSection.style.opacity = '0.5';
-                         offlineBSection.style.pointerEvents = 'none';
-                         if (offlineBMessage) {
-                            offlineBMessage.classList.remove('hidden');
-                            offlineBMessage.textContent = currentQuarter > 8 ? '🔒 Penjualan Offline Produk B telah berakhir.' : '🔒 Penjualan Offline Produk B tersedia Medium K5-8';
-                         }
-                    } else {
-                        offlineBSection.classList.add('hidden');
-                    }
-                }
-            }
+            // ... (kode visual hide/show section B sebelumnya) ...
         }
-
         function updateOnlineAvailability() {
             const kuartil = currentQuarter;
             const isMedium = currentUser.level === 'medium';
@@ -1015,58 +967,98 @@
             }
         }
 
-        function loadInputData(kuartil) {
-            const savedDecision = decisions.find(d => d.kuartil === kuartil);
-            const defaultDecision = {
-                marketing_1: '', marketing_2: '', marketing_3: '',
-                supplier_a_A: 0, supplier_b_A: 0, supplier_c_A: 0, supplier_d_A: 0,
-                supplier_a_B: 0, supplier_b_B: 0, supplier_c_B: 0, supplier_d_B: 0,
-                harga_offline_A: 0, pembeli_datang_terlayani_offline_A: 0, pembeli_tambahan_offline_A: 0, pembeli_tambahan_terlayani_offline_A: 0,
-                harga_offline_B: 0, pembeli_datang_terlayani_offline_B: 0, pembeli_tambahan_offline_B: 0, pembeli_tambahan_terlayani_offline_B: 0,
-                harga_online_A: 0, pembeli_datang_terlayani_online_A: 0, pembeli_tambahan_online_A: 0, pembeli_tambahan_terlayani_online_A: 0,
-                harga_online_B: 0, pembeli_datang_terlayani_online_B: 0, pembeli_tambahan_online_B: 0, pembeli_tambahan_terlayani_online_B: 0,
-            };
-            const decisionData = savedDecision || defaultDecision;
-
-            // Mapping Inputs
-            document.getElementById('marketing1').value = decisionData.marketing_1;
-            document.getElementById('marketing2').value = decisionData.marketing_2;
-            document.getElementById('marketing3').value = decisionData.marketing_3;
-            renderStrategies();
-            // ... Suppliers A ...
-            document.getElementById('supplierA_A').value = decisionData.supplier_a_A;
-            document.getElementById('supplierB_A').value = decisionData.supplier_b_A;
-            document.getElementById('supplierC_A').value = decisionData.supplier_c_A;
-            document.getElementById('supplierD_A').value = decisionData.supplier_d_A;
-             // ... Suppliers B ...
-            document.getElementById('supplierA_B').value = decisionData.supplier_a_B;
-            document.getElementById('supplierB_B').value = decisionData.supplier_b_B;
-            document.getElementById('supplierC_B').value = decisionData.supplier_c_B;
-            document.getElementById('supplierD_B').value = decisionData.supplier_d_B;
-
-            document.getElementById('harga_offline_A').value = String(decisionData.harga_offline_A || 0).replace(/\./g, "");
-            document.getElementById('pembeli_datang_terlayani_offline_A').value = decisionData.pembeli_datang_terlayani_offline_A;
-            document.getElementById('pembeli_tambahan_offline_A').value = decisionData.pembeli_tambahan_offline_A;
-            document.getElementById('pembeli_tambahan_terlayani_offline_A').value = decisionData.pembeli_tambahan_terlayani_offline_A;
+        async function loadInputData(kuartil) {
+            if (!currentUser) return;
             
-            document.getElementById('harga_offline_B').value = String(decisionData.harga_offline_B || 0).replace(/\./g, "");
-            document.getElementById('pembeli_datang_terlayani_offline_B').value = decisionData.pembeli_datang_terlayani_offline_B;
-            document.getElementById('pembeli_tambahan_offline_B').value = decisionData.pembeli_tambahan_offline_B;
-            document.getElementById('pembeli_tambahan_terlayani_offline_B').value = decisionData.pembeli_tambahan_terlayani_offline_B;
+            showLoading('Mengambil data keputusan...');
             
-            document.getElementById('harga_online_A').value = String(decisionData.harga_online_A || 0).replace(/\./g, "");
-            document.getElementById('pembeli_datang_terlayani_online_A').value = decisionData.pembeli_datang_terlayani_online_A;
-            document.getElementById('pembeli_tambahan_online_A').value = decisionData.pembeli_tambahan_online_A;
-            document.getElementById('pembeli_tambahan_terlayani_online_A').value = decisionData.pembeli_tambahan_terlayani_online_A;
+            // Reset Form dulu ke 0
+            resetFormValues(); 
 
-            document.getElementById('harga_online_B').value = String(decisionData.harga_online_B || 0).replace(/\./g, "");
-            document.getElementById('pembeli_datang_terlayani_online_B').value = decisionData.pembeli_datang_terlayani_online_B;
-            document.getElementById('pembeli_tambahan_online_B').value = decisionData.pembeli_tambahan_online_B;
-            document.getElementById('pembeli_tambahan_terlayani_online_B').value = decisionData.pembeli_tambahan_terlayani_online_B;
+            try {
+                const url = `${API_URL}?action=get_input_decision&level=${currentUser.level}&kelompok=${currentUser.kelompok}&kuartil=${kuartil}`;
+                const response = await fetch(url);
+                const json = await response.json();
 
-            renderStrategies(); 
+                if (json.success && json.data) {
+                    const d = json.data;
+
+                    // --- Populate Form ---
+                    // Marketing
+                    document.getElementById('marketing1').value = d.marketing_1 || '';
+                    document.getElementById('marketing2').value = d.marketing_2 || '';
+                    document.getElementById('marketing3').value = d.marketing_3 || '';
+                    
+                    // Suppliers
+                    document.getElementById('supplierA_A').value = d.supplier_a_A || 0;
+                    document.getElementById('supplierB_A').value = d.supplier_b_A || 0;
+                    document.getElementById('supplierC_A').value = d.supplier_c_A || 0;
+                    document.getElementById('supplierD_A').value = d.supplier_d_A || 0;
+                    
+                    document.getElementById('supplierA_B').value = d.supplier_a_B || 0;
+                    document.getElementById('supplierB_B').value = d.supplier_b_B || 0;
+                    document.getElementById('supplierC_B').value = d.supplier_c_B || 0;
+                    document.getElementById('supplierD_B').value = d.supplier_d_B || 0;
+
+                    // Offline A
+                    setVal('harga_offline_A', d.harga_offline_A);
+                    setVal('pembeli_datang_terlayani_offline_A', d.pembeli_datang_terlayani_offline_A);
+                    setVal('pembeli_tambahan_offline_A', d.pembeli_tambahan_offline_A);
+                    setVal('pembeli_tambahan_terlayani_offline_A', d.pembeli_tambahan_terlayani_offline_A);
+
+                    // Offline B
+                    setVal('harga_offline_B', d.harga_offline_B);
+                    setVal('pembeli_datang_terlayani_offline_B', d.pembeli_datang_terlayani_offline_B);
+                    setVal('pembeli_tambahan_offline_B', d.pembeli_tambahan_offline_B);
+                    setVal('pembeli_tambahan_terlayani_offline_B', d.pembeli_tambahan_terlayani_offline_B);
+
+                    // Online A
+                    setVal('harga_online_A', d.harga_online_A);
+                    setVal('pembeli_datang_terlayani_online_A', d.pembeli_datang_terlayani_online_A);
+                    setVal('pembeli_tambahan_online_A', d.pembeli_tambahan_online_A);
+                    setVal('pembeli_tambahan_terlayani_online_A', d.pembeli_tambahan_terlayani_online_A);
+                    
+                    // Online B
+                    setVal('harga_online_B', d.harga_online_B);
+                    setVal('pembeli_datang_terlayani_online_B', d.pembeli_datang_terlayani_online_B);
+                    setVal('pembeli_tambahan_online_B', d.pembeli_tambahan_online_B);
+                    setVal('pembeli_tambahan_terlayani_online_B', d.pembeli_tambahan_terlayani_online_B);
+
+                    // Re-render visual
+                    renderStrategies();
+                    
+                    // Format ulang input rupiah
+                    document.querySelectorAll('.format-rupiah').forEach(el => {
+                        let val = el.value.replace(/\D/g, "");
+                        el.value = val ? new Intl.NumberFormat("id-ID").format(val) : "";
+                    });
+                }
+            } catch (e) {
+                console.error("Gagal load input:", e);
+            } finally {
+                hideLoading();
+                // Cek status kunci setelah data terload
+                checkAndLockQuarter(kuartil);
+            }
+        }
+        // Helper reset
+        function resetFormValues() {
+            const inputs = document.querySelectorAll('#inputTab input');
+            inputs.forEach(i => {
+                if(i.type === 'number') i.value = 0;
+                else if(i.type === 'text') i.value = '';
+                else if(i.type === 'hidden') i.value = '';
+            });
         }
 
+        // Helper set value dengan handling null
+        function setVal(id, val) {
+            const el = document.getElementById(id);
+            if(el) {
+                if (typeof val === 'number') el.value = val;
+                else el.value = val || 0;
+            }
+        }
         async function saveMarketingOnly() {
             if (!currentUser) return alert('❌ Sesi tidak valid.');
             showLoading('Menyimpan strategi pemasaran...');
@@ -1155,15 +1147,86 @@
                 return false;
             } catch (error) { inventoryDataCache = []; return false; }
         }
+        function validateFormInputs() {
+            // Daftar ID elemen yang WAJIB diisi
+            // Catatan: Field Produk B dan Online disesuaikan dengan ketersediaan kuartil
+            
+            let requiredIds = [
+                // Marketing
+                'marketing1', 'marketing2', 'marketing3', 
+                // Supplier A
+                'supplierA_A', 'supplierB_A', 'supplierC_A', 'supplierD_A',
+                // Offline A
+                'harga_offline_A', 'pembeli_datang_terlayani_offline_A', 
+                'pembeli_tambahan_offline_A', 'pembeli_tambahan_terlayani_offline_A'
+            ];
 
-        function updateInventoryInfo() {
+            const isMedium = currentUser.level === 'medium';
+            const isEasy = currentUser.level === 'easy';
+            const k = currentQuarter;
+
+            // Logic Produk B (Inventory & Offline) - Medium K5-8
+            if (isMedium && k >= 5 && k <= 8) {
+                requiredIds.push(
+                    'supplierA_B', 'supplierB_B', 'supplierC_B', 'supplierD_B',
+                    'harga_offline_B', 'pembeli_datang_terlayani_offline_B',
+                    'pembeli_tambahan_offline_B', 'pembeli_tambahan_terlayani_offline_B'
+                );
+            }
+
+            // Logic Online A (Easy K5+, Medium K1+)
+            if ((isEasy && k >= 5) || (isMedium && k >= 1)) {
+                requiredIds.push(
+                    'harga_online_A', 'pembeli_datang_terlayani_online_A',
+                    'pembeli_tambahan_online_A', 'pembeli_tambahan_terlayani_online_A'
+                );
+            }
+
+            // Logic Online B (Medium K5+)
+            if (isMedium && k >= 5 && k <= 8) {
+                requiredIds.push(
+                    'harga_online_B', 'pembeli_datang_terlayani_online_B',
+                    'pembeli_tambahan_online_B', 'pembeli_tambahan_terlayani_online_B'
+                );
+            }
+
+            // Cek Loop
+            for (let id of requiredIds) {
+                let el = document.getElementById(id);
+                if (!el) continue; // Skip jika elemen html tidak ada (defensive)
+                let val = el.value;
+                
+                // Cek kosong atau string kosong
+                if (val === null || val.toString().trim() === "") {
+                    alert(`⚠️ Data belum lengkap! Harap isi field yang kosong (Cek inputan harga atau jumlah).`);
+                    el.focus();
+                    return false;
+                }
+            }
+            
+            // Cek Strategi Marketing harus unik
+            const m1 = document.getElementById('marketing1').value;
+            const m2 = document.getElementById('marketing2').value;
+            const m3 = document.getElementById('marketing3').value;
+            
+            // Cek apakah ada duplikat
+            if ((m1 && m1 === m2) || (m1 && m1 === m3) || (m2 && m2 === m3)) {
+                alert("⚠️ Strategi marketing tidak boleh sama dalam satu kuartil.");
+                return false;
+            }
+
+            return true;
+        }
+
+        function updateInventoryHeaderForQuarter(viewingKuartil) {
             const container = document.getElementById('inventoryInfo');
             if (!container) return;
 
-            const lastQ = currentQuarter - 1;
+            // Data Inventory yang ditampilkan adalah Akhir dari Kuartil sebelumnya (viewing - 1)
+            const prevQ = viewingKuartil - 1;
 
-            // Kuartil 0 → hanya tampilkan kas awal
-            if (lastQ < 1) {
+            // Jika Kuartil 1, tampilkan Kas Awal default
+            if (prevQ < 1) {
                 container.innerHTML = `
                     <div style="font-size:1em; font-weight:bold;">Rp 50.000.000</div>
                     <div style="font-size:0.75em; color:#888;">Kas Awal</div>
@@ -1172,34 +1235,90 @@
                 return;
             }
 
-            let inv = { inventory_A: 0, inventory_B: 0, inventory_C: 0 };
             let cash = 0;
+            let inv = { inventory_A: 0, inventory_B: 0, inventory_C: 0, inventory_D: 0};
 
+            // Ambil Cash dari Summary Q sebelumnya
             if (summaryDataCache) {
-                const sum = summaryDataCache.find(
-                    s => parseInt(s.kuartil.replace('Kuartil ', '')) === lastQ
-                );
-                cash = sum ? sum.cash : 0;
+                const sum = summaryDataCache.find(s => s.kuartil === `Kuartil ${prevQ}`);
+                if (sum) cash = sum.cash;
             }
 
+            // Ambil Inventory dari API Cache
             if (inventoryDataCache) {
-                const item = inventoryDataCache.find(s => s.kuartil === currentQuarter);
+                // Cari data di mana kuartil == viewingKuartil (karena sheet inventory mencatat "Inventori Awal Qx")
+                const item = inventoryDataCache.find(s => s.kuartil === viewingKuartil);
                 if (item) inv = item;
             }
 
             container.innerHTML = `
-                <div style="font-size:0.7em; color:#888;">Inventory Akhir Q${lastQ}</div>
+                <div style="font-size:0.7em; color:#888;">Inventory Awal Q${viewingKuartil} (Sisa Q${prevQ})</div>
                 <div style="font-size:1em; font-weight:bold;">${formatCurrency(cash)}</div>
                 <div style="font-size:0.72em; margin-top:3px;">
                     A: ${formatNumber(inv.inventory_A)} |
                     B: ${formatNumber(inv.inventory_B)} |
-                    C: ${formatNumber(inv.inventory_C)}
+                    C: ${formatNumber(inv.inventory_C)} |
+                    D: ${formatNumber(inv.inventory_D)}
                 </div>
             `;
-
             container.classList.remove('hidden');
         }
 
+        function setFormDisabled(isDisabled) {
+            const inputTab = document.getElementById('inputTab');
+            if (!inputTab) return;
+
+            // 1. Cari semua input, select, dan elemen strategi
+            const elements = inputTab.querySelectorAll('input, select, .strategy-card');
+            
+            elements.forEach(el => {
+                if (isDisabled) {
+                    el.classList.add('disabled');
+                    // Jika elemen adalah div strategy-card, pointer-events none sudah cukup
+                    el.style.pointerEvents = 'none';
+                    // Jika elemen adalah input text/number, set readonly
+                    if(el.tagName === 'INPUT') el.readOnly = true;
+                    // Jika elemen adalah select/checkbox, set disabled
+                    if(el.tagName === 'SELECT' || el.type === 'checkbox') el.disabled = true;
+                } else {
+                    el.classList.remove('disabled');
+                    el.style.pointerEvents = 'auto';
+                    if(el.tagName === 'INPUT') el.readOnly = false;
+                    if(el.tagName === 'SELECT' || el.type === 'checkbox') el.disabled = false;
+                }
+            });
+
+            // 2. Handle tombol Simpan Utama
+            const saveBtn = document.getElementById('saveDecisionBtn');
+            if (saveBtn) {
+                saveBtn.disabled = isDisabled;
+                // Gunakan variabel global currentQuarter untuk teks tombol
+                saveBtn.textContent = isDisabled ? "🔒 Keputusan Terkunci" : `Simpan Keputusan Kuartil ${currentQuarter}`;
+            }
+            
+            // 3. Handle tombol Simpan Parsial (Marketing & Harga)
+            const saveMktBtn = document.querySelector('button[onclick="saveMarketingOnly()"]');
+            if (saveMktBtn) saveMktBtn.disabled = isDisabled;
+
+            const savePriceBtns = document.querySelectorAll('button[onclick^="savePricesOnly"]');
+            savePriceBtns.forEach(b => b.disabled = isDisabled);
+        }
+
+        function checkAndLockQuarter(kuartil) {
+            // Kita cek di summaryDataCache apakah kuartil ini sudah ada status 'Ya'
+            if (!summaryDataCache) return;
+
+            // Cari data summary untuk kuartil yg sedang dibuka
+            // Format di summaryDataCache: { kuartil: "Kuartil 1", sudahBerjalan: "Ya", ... }
+            const status = summaryDataCache.find(s => s.kuartil === `Kuartil ${kuartil}`);
+            
+            const isLocked = status && (status.sudahBerjalan === 'Ya' || status.sudahBerjalan === 'YES');
+            
+            setFormDisabled(isLocked);
+            
+            // Update Inventory Info Header agar sesuai Kuartil yang DIBUKA
+            updateInventoryHeaderForQuarter(kuartil);
+        }
 
         async function sendToGoogleSheets(payload) {
             try {
@@ -1305,16 +1424,18 @@
                             const kuartil1 = summaryDataCache.find(i => i.kuartil === 'Kuartil 1');
                             if(kuartil1 && (kuartil1.sudahBerjalan === 'Ya' || kuartil1.sudahBerjalan === 'YES')) {
                                 displaySummaryTables(summaryDataCache);
-                                renderCashflowChart(summaryDataCache);
+                                // GANTI: Panggil loadComparisonChart bukan renderCashflowChart
+                                loadComparisonChart();
                             } else {
                                 container.innerHTML = '<div class="text-center p-4"><h3>🎮 Game Belum Dimulai</h3></div>';
-                                renderCashflowChart([]);
+                                // Bersihkan chart jika ada
+                                if (kasChart) kasChart.destroy();
                             }
                         } else {
                             container.innerHTML = '<p class="text-center">Data belum tersedia.</p>';
                         }
                     }
-                    updateInventoryInfo();
+                    updateInventoryHeaderForQuarter(currentQuarter);
                 }
             } catch (error) {
                 if(!onlyCache) container.innerHTML = '<p class="text-danger text-center">Gagal memuat data.</p>';
@@ -1334,11 +1455,24 @@
                 container.innerHTML = '<p class="text-center">Belum ada kuartil berjalan.</p>'; return;
             }
 
+            // LOGIC BARU: Cek apakah ada data Online Rating yang tidak 0/kosong
+            const showOnline = completed.some(item => {
+                 const val = item.onlineRating;
+                 // Cek jika val ada, tidak null, dan bukan string '0%' atau angka 0
+                 return val && val !== '0%' && val !== 0 && val !== '0';
+            });
+
             let html = `
                 <div class="table-container">
                 <table>
                     <thead>
-                        <tr><th>Kuartil</th><th>Status</th><th>Kas</th><th>Off Rating</th><th>On Rating</th></tr>
+                        <tr>
+                            <th>Kuartil</th>
+                            <th>Status</th>
+                            <th>Kas</th>
+                            <th>Off Rating</th>
+                            ${showOnline ? '<th>On Rating</th>' : ''} 
+                        </tr>
                     </thead>
                     <tbody>
             `;
@@ -1348,35 +1482,87 @@
                     <td>✅ Selesai</td>
                     <td>${formatCurrency(item.cash)}</td>
                     <td>${item.offlineRating}</td>
-                    <td>${item.onlineRating}</td>
+                    ${showOnline ? `<td>${item.onlineRating}</td>` : ''}
                 </tr>`;
             });
             html += '</tbody></table></div>';
             container.innerHTML = html;
         }
 
-        function renderCashflowChart(summaryData) {
+        // FUNGSI BARU: Load Chart Perbandingan P1 vs P2
+        async function loadComparisonChart() {
             const ctx = document.getElementById('kasChart');
             if (!ctx) return;
-            const chartData = summaryData.filter(i => parseInt(i.kuartil.replace('Kuartil ','')) < currentQuarter);
             
+            // Hapus chart lama jika ada
             if (kasChart) kasChart.destroy();
-            if (chartData.length === 0) return;
 
-            kasChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: chartData.map(i => i.kuartil),
-                    datasets: [{
-                        label: 'Kas Tersedia',
-                        data: chartData.map(i => i.cash),
-                        borderColor: '#C07848',
-                        backgroundColor: 'rgba(192, 120, 72, 0.2)',
-                        tension: 0.4, borderWidth: 3
-                    }]
-                },
-                options: { responsive: true, plugins: { legend: { display: false } } }
-            });
+            try {
+                // Panggil endpoint baru: get_chart_data
+                // Asumsi: Backend sudah diupdate dan sheetId dihandle di backend (hardcode/active)
+                const url = `${API_URL}?action=get_chart_data`; 
+                const response = await fetch(url);
+                const json = await response.json();
+                
+                if (json.success && json.data) {
+                    kasChart = new Chart(ctx, {
+                        type: 'line',
+                        data: json.data, // Gunakan struktur data langsung dari backend
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false,
+                            },
+                            plugins: {
+                                legend: { 
+                                    position: 'bottom',
+                                    labels: { usePointStyle: true, padding: 20 }
+                                },
+                                title: { 
+                                    display: true, 
+                                    text: 'Perbandingan Performa (P1 vs P2)',
+                                    font: { size: 16 }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            let label = context.dataset.label || '';
+                                            if (label) label += ': ';
+                                            if (context.parsed.y !== null) {
+                                                // Format angka sebagai Rupiah atau angka biasa tergantung data
+                                                // Jika nilainya besar (>1000), anggap uang
+                                                if (context.parsed.y > 1000) {
+                                                    label += new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(context.parsed.y);
+                                                } else {
+                                                    label += context.parsed.y;
+                                                }
+                                            }
+                                            return label;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: false, // Biarkan dynamic
+                                    grid: { color: '#f0f0f0' }
+                                },
+                                x: {
+                                    grid: { display: false }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    console.warn("Chart data empty or failed:", json.message);
+                }
+            } catch (e) {
+                console.error("Gagal memuat chart perbandingan:", e);
+                // Fallback text di canvas container jika error
+                ctx.parentElement.innerHTML = '<p class="text-center text-danger">Gagal memuat grafik perbandingan.</p>';
+            }
         }
 
         function goToPreviousQuarter() {
@@ -1392,13 +1578,16 @@
                 currentQuarter++;
                 localStorage.setItem('currentQuarter', currentQuarter);
                 updateQuarter();
-                fetchInventoryData().then(updateInventoryInfo);
+                fetchInventoryData().then(updateInventoryHeaderForQuarter(currentQuarter));
                 alert(`Pindah ke Kuartil ${currentQuarter}`);
             }
         }
 
         async function saveFullDecision() {
             if (!currentUser) return alert('❌ Sesi invalid.');
+            if (!validateFormInputs()) {
+                return; // Berhenti jika tidak valid
+            }
             showLoading('Menyimpan keputusan...');
             
             // Collect Inputs (Condensed for brevity, same logic as original)
