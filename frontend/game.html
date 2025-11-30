@@ -189,6 +189,58 @@
             stroke-width: 2.5;
         }
 
+        /* Wrapper utama navbar */
+        .navbar-content {
+            display: flex;
+            flex-direction: column; /* Default: Susun ke bawah (Baris 1: Header, Baris 2: Saldo) */
+            gap: 15px;
+        }
+
+        /* Baris Atas: Berisi Judul/Info (Kiri) dan Logout (Kanan) */
+        .nav-top-row {
+            display: flex;
+            justify-content: space-between; /* Judul kiri, Tombol kanan mentok */
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        /* Area Teks Judul & Info User */
+        .nav-title-area {
+            flex: 1; /* Mengambil sisa ruang */
+            padding-right: 10px; /* Jarak agar tidak nempel tombol */
+        }
+
+        .nav-title-area h1 {
+            font-size: 1.6em; /* Sedikit dikecilkan untuk HP */
+            margin-bottom: 5px;
+            line-height: 1.2;
+        }
+
+        /* Area Tombol Logout */
+        .nav-action-area {
+            flex-shrink: 0; /* Tombol tidak boleh mengecil */
+        }
+
+        /* Style Inventory/Saldo (Baris Bawah) */
+        #inventoryInfo {
+            width: 100%;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-left: 5px solid #F6BB42; /* Aksen kuning */
+            border-radius: 8px;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9em;
+        }
+
+        /* Tweak khusus HP sangat kecil */
+        @media (max-width: 400px) {
+            .nav-title-area h1 { font-size: 1.3em; }
+            .subtitle { font-size: 0.85em; }
+        }
+
         /* Penyesuaian agar Stats terlihat rapi di luar navbar */
         #dashboardStats {
             margin-bottom: 20px; /* Jarak ke tombol tab di bawahnya */
@@ -368,29 +420,34 @@
     </div>
 
     <div id="mainApp" class="container hidden" style="margin-top: 20px;">
-        <div class="card" style="position: sticky; top: 0; z-index: 1000; border-color: #F6BB42; background: #fffcf5; padding: 15px 30px; margin-bottom: 20px;">
-            <div class="flex justify-between items-center" style="gap: 15px;">
+        <div class="card sticky-nav" style="position: sticky; top: 0; z-index: 1000; border-color: #F6BB42; background: #fffcf5; padding: 15px; margin-bottom: 20px;">
+            <div class="navbar-content">
                 
-                <div style="flex: 1;">
-                    <h1 style="font-size: 1.5em; margin-bottom: 5px;">Ready, Set, Sell! 🎮</h1>
-                    <p class="subtitle" style="margin: 0; font-size: 0.9em; margin-bottom: 0;">
-                        <span id="userInfo" style="font-weight: bold; color: #5D4037;"></span> 
-                        &bull; Kuartil <span id="currentQuarter" style="font-weight: 800; font-size: 1.1em; color: #C07848;">1</span>
-                        &bull; <span style="color: #888;">Lawan: Kelompok <span id="opponentInfo" style="font-weight: bold;"></span></span>
-                    </p>
+                <div class="nav-top-row">
+                    
+                    <div class="nav-title-area">
+                        <h1 style="color: #C07848; margin-top: 0;">Ready, Set, Sell! 🎮</h1>
+                        <p class="subtitle" style="margin: 0; font-size: 0.9em; line-height: 1.5; color: #5D4037;">
+                            <span id="userInfo" style="font-weight: bold;"></span><br>
+                            &bull; Kuartil <span id="currentQuarter" style="font-weight: 800; color: #C07848;">1</span>
+                            &bull; <span style="color: #888;">Lawan: <span id="opponentInfo" style="font-weight: bold;">-</span></span>
+                        </p>
+                    </div>
+
+                    <div class="nav-action-area">
+                        <button onclick="handleLogout()" class="btn btn-danger btn-icon" title="Logout" style="box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                <polyline points="16 17 21 12 16 7"></polyline>
+                                <line x1="21" y1="12" x2="9" y2="12"></line>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
-                <div id="inventoryInfo" class="bg-light hidden" style="flex-shrink: 0; padding: 5px 10px; font-size: 0.8em;"></div>
+                <div id="inventoryInfo" class="hidden">
+                    </div>
 
-                <div style="flex-shrink: 0;">
-                    <button onclick="handleLogout()" class="btn btn-danger btn-icon" title="Logout">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                            <polyline points="16 17 21 12 16 7"></polyline>
-                            <line x1="21" y1="12" x2="9" y2="12"></line>
-                        </svg>
-                    </button>
-                </div>
             </div>
         </div>
 
@@ -399,7 +456,7 @@
                 <div style="font-weight: bold; color: #3bafda; margin-bottom: 8px; font-size: 1em; border-bottom: 1px solid #eee; padding-bottom: 5px;">🏪 TOKO OFFLINE</div>
                 <div class="stat-grid" style="gap: 10px;">
                     <div><div style="color:#aaa; font-size: 0.85em;">Rating Awal</div><div id="stat_offline_rating_awal" class="stat-val">0%</div></div>
-                    <div><div style="color:#aaa; font-size: 0.85em;">Datang/Miss</div><div class="stat-val"><span id="stat_offline_datang">0</span> / <span id="stat_offline_missed" class="text-danger">0</span></div></div>
+                    <div><div style="color:#aaa; font-size: 0.85em;">Datang/Tidak Terlayani</div><div class="stat-val"><span id="stat_offline_datang">0</span> / <span id="stat_offline_missed" class="text-danger">0</span></div></div>
                     <div><div style="color:#aaa; font-size: 0.85em;">Rating Akhir</div><div id="stat_offline_rating_akhir" class="stat-val">0%</div></div>
                 </div>
             </div>
@@ -411,7 +468,7 @@
                 </div>
                 <div class="stat-grid" style="gap: 10px;">
                     <div><div style="color:#aaa; font-size: 0.85em;">Rating Awal</div><div id="stat_online_rating_awal" class="stat-val">0%</div></div>
-                    <div><div style="color:#aaa; font-size: 0.85em;">Datang/Miss</div><div class="stat-val"><span id="stat_online_datang">0</span> / <span id="stat_online_missed" class="text-danger">0</span></div></div>
+                    <div><div style="color:#aaa; font-size: 0.85em;">Datang/Tidak Terlayani</div><div class="stat-val"><span id="stat_online_datang">0</span> / <span id="stat_online_missed" class="text-danger">0</span></div></div>
                     <div><div style="color:#aaa; font-size: 0.85em;">Rating Akhir</div><div id="stat_online_rating_akhir" class="stat-val">0%</div></div>
                 </div>
             </div>
