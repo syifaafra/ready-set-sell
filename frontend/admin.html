@@ -144,7 +144,7 @@
         .message.success { background: #E8F5E9; color: #2E7D32; border: 2px solid #C8E6C9; }
         .message.error { background: #FFEBEE; color: #C62828; border: 2px solid #FFCDD2; }
 
-        /* --- COPY DAN GANTI BAGIAN CSS INI --- */
+        
 
         /* 1. Spinner Processing */
         #loadingOverlay {
@@ -157,6 +157,8 @@
             align-items: center;
             flex-direction: column; /* Agar spinner di atas teks */
         }
+
+        
         
         .spinner {
             width: 50px; height: 50px; 
@@ -166,6 +168,13 @@
             animation: spin 1s linear infinite;
             margin-bottom: 20px; /* Jarak antara spinner dan teks */
         }
+
+        /* FIX: Animasi spinner */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
 
         /* 2. Modal (Password / PDF) */
         .modal {
@@ -199,11 +208,10 @@
 <body>
 
     <div id="loadingOverlay">
-        <div style="text-align: center;">
-            <div class="spinner"></div>
-            <h3 style="margin-top: 20px; color: #F6BB42;">Processing...</h3>
-        </div>
+        <div class="spinner"></div>
+        <h3 style="margin-top: 20px; color: #F6BB42;">Processing...</h3>
     </div>
+
 
     <div id="passwordModal" class="modal">
         <div class="modal-content">
@@ -325,22 +333,24 @@
             event.preventDefault();
             const password = document.getElementById('adminPassword').value;
             const msg = document.getElementById('loginMessage');
-            
+
             showLoading(true);
+            await new Promise(r => setTimeout(r)); // <<< FIX
+
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     body: JSON.stringify({ action: 'adminLogin', password: password }),
                     mode: 'cors'
                 });
-                
+
                 const data = await response.json();
                 showLoading(false);
 
-                if(data.success) {
+                if (data.success) {
                     document.getElementById('loginSection').style.display = 'none';
                     document.getElementById('adminSection').style.display = 'block';
-                    loadTableData(); 
+                    loadTableData();
                 } else {
                     msg.innerHTML = `<div class="message error">${data.message}</div>`;
                 }
@@ -363,36 +373,37 @@
             e.preventDefault();
             const oldPass = document.getElementById('oldPass').value;
             const newPass = document.getElementById('newPass').value;
-            
+
             closeModal();
             showLoading(true);
+            await new Promise(r => setTimeout(r)); // <<< FIX
 
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ 
-                        action: 'changePassword', 
+                    body: JSON.stringify({
+                        action: 'changePassword',
                         oldPassword: oldPass,
                         newPassword: newPass
                     }),
                     mode: 'cors'
                 });
+
                 const res = await response.json();
                 showLoading(false);
-                
-                if(res.success) {
+
+                if (res.success) {
                     alert("✅ Password berhasil diganti!");
                     logout();
                 } else {
                     alert("❌ Gagal: " + res.message);
                 }
-            } catch(err) {
+            } catch (err) {
                 showLoading(false);
                 alert("❌ Error: " + err.message);
             }
         }
 
-        // --- TABLE RENDER LOGIC (UPDATED WITH CLASSES) ---
         async function loadTableData() {
             renderTable();
         }
@@ -444,20 +455,23 @@
         }
 
         async function deletePair(pairKey, label) {
-            if(!confirm(`⚠️ Hapus data untuk ${label}?\nData kuartil akan di-reset.`)) return;
-            
+            if (!confirm(`⚠️ Hapus data untuk ${label}?\nData kuartil akan di-reset.`)) return;
+
             showLoading(true);
+            await new Promise(r => setTimeout(r)); // <<< FIX
+
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     body: JSON.stringify({ action: 'clear_pair', pairKey: pairKey }),
                     mode: 'cors'
                 });
+
                 const res = await response.json();
                 showLoading(false);
-                if(res.success) showMsg(res.message);
+                if (res.success) showMsg(res.message);
                 else showMsg(res.error, true);
-            } catch(e) {
+            } catch (e) {
                 showLoading(false);
                 showMsg(e.message, true);
             }
@@ -465,24 +479,27 @@
 
         async function confirmDeleteAll() {
             const code = prompt("Ketik 'RESET ALL' untuk menghapus SEMUA data:");
-            if(code !== 'RESET ALL') return;
-            
+            if (code !== 'RESET ALL') return;
+
             showLoading(true);
+            await new Promise(r => setTimeout(r)); // <<< FIX
+
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     body: JSON.stringify({ action: 'clear_all_sheets' }),
                     mode: 'cors'
                 });
+
                 const res = await response.json();
                 showLoading(false);
                 alert(res.success ? res.message : res.error);
-            } catch(e) {
+            } catch (e) {
                 showLoading(false);
                 alert('Error: ' + e.message);
             }
         }
-        
+
         window.onclick = function(event) {
             const modal = document.getElementById('passwordModal');
             if (event.target == modal) closeModal();
